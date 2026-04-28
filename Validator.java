@@ -1,4 +1,7 @@
+import java.io.IOException;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Validator is an abstract superclass that provides common
@@ -15,6 +18,46 @@ public final class Validator {
      * Default constructor for Validator.
      */
     private Validator() {
+    }
+
+    /**
+     * returns whether a string's length is within a specified Range
+     *
+     * @param minLen The minimum length a string can be.
+     * @param maxLen The maximum length a string can be.
+     * @param str    The string to be evaluated.
+     * @return true if a given string is of valid length. else return false.
+     * @author Navardo Williams
+     */
+    public static boolean validStrLen(int minLen, int maxLen, String str) {
+        return (minLen <= str.length() && maxLen >= str.length()) ? true : false;
+    }
+
+    /**
+     * @param str String passed for meta data extractraction.
+     * @return A map containing the meta data of string passed.
+     * @author Navardo Williams
+     */
+    public static Map<String, Boolean> extractStrMeta(String str) {
+        Map<String, Boolean> strHm = new HashMap<>(Map.of(
+                "hasLoCase", false,
+                "hasUpCase", false,
+                "hasSpecChar", false,
+                "hasNum", false));
+        for (char c : str.toCharArray()) {
+            if (!strHm.get("hasUpCase") && Character.isUpperCase(c))
+                strHm.put("hasUpCase", true);
+            if (!strHm.get("hasLoCase") && Character.isLowerCase(c))
+                strHm.put("hasLoCase", true);
+            int asciiVal = (int) c;
+            if (!strHm.get("hasSpecChar")
+                    && ((asciiVal >= 32 && asciiVal <= 47) || (asciiVal >= 58 && asciiVal <= 64) ||
+                            (asciiVal >= 91 && asciiVal <= 96) || (asciiVal >= 123 && asciiVal <= 126)))
+                strHm.put("hasSpecChar", true);
+            if (!strHm.get("hasNum") && Character.isDigit(c))
+                strHm.put("hasNum", true);
+        }
+        return strHm;
     }
 
     /**
@@ -82,8 +125,9 @@ class CsvValidator {
      * Validates the entire file by checking file name, header,
      * records, and year consistency.
      *
-     * @param fileName the name of the CSV file
-     * @param rows the contents of the CSV file where each row is split into fields
+     * @param fileName      the name of the CSV file
+     * @param rows          the contents of the CSV file where each row is split
+     *                      into fields
      * @param existingYears list of years already stored for the user
      * @return true if the file passes all validation checks, false otherwise
      * @author Nadim Siddique
@@ -232,7 +276,7 @@ class CsvValidator {
      * Validates that the year being uploaded does not already exist
      * for the current user.
      *
-     * @param year the year extracted from the file
+     * @param year          the year extracted from the file
      * @param existingYears list of years already stored for the user
      * @return true if the year is unique, false otherwise
      * @author Nadim Siddique
@@ -299,7 +343,7 @@ class CsvValidator {
      * required type
      * (e.g., integer, double, string, etc).
      *
-     * @param value the value to validate
+     * @param value        the value to validate
      * @param expectedType the expected data type (e.g., "int", "double", "string")
      * @return true if the value matches the expected data type, false otherwise
      * @author Masudul Shafi
@@ -389,7 +433,7 @@ class CsvValidator {
     /**
      * Ensures that each row contains the correct number of columns.
      *
-     * @param rows the contents of the CSV file
+     * @param rows                the contents of the CSV file
      * @param expectedColumnCount the required number of columns
      * @return true if all rows have the correct number of columns, false otherwise
      * @author David Li
@@ -426,25 +470,85 @@ class UserValidator {
     }
 
     /**
-     * validates a username for login or signup
+     * functioon to validate usernames
      *
-     * @param userName account username how they get it
-     * @return true if inputed userName is valid, false if not valid
+     * @param userName The username to be validated
+     * @param minLen   The minimum length the username can be.
+     * @param maxLen   The Maximum length the username can be.
+     * @param LowCase  Set true if userName must contain atleast one lowercase
+     *                 character, false otherwise.
+     * @param upCase   Set true if userName must contain atleast one uppercase
+     *                 character, false otherwise.
+     * @param specChar set true if userName must contain atleast one special
+     *                 character, false otherwise.
+     * @param num      ser true if userName must contain atleast one numerical
+     *                 value, false otherwise.
+     * @return true if all constraints are satisfied.
+     * @throws IOException If all constraints aren't satisfied.
      * @author Navardo Williams
      */
-    public static boolean validateUserName(String userName) {
-        return false;
+    public static boolean validateUserName(String userName, int minLen, int maxLen, boolean LowCase, boolean upCase,
+            boolean specChar,
+            boolean num) throws IOException {
+
+        String type = "username";
+        StringBuilder message = new StringBuilder("");
+        if (!Validator.validStrLen(minLen, maxLen, userName))
+            message.append(String.format("%s must be between %d and %d\n", type, minLen, maxLen));
+
+        Map<String, Boolean> strMeta = Validator.extractStrMeta(userName);
+        if (LowCase && !strMeta.get("hasLoCase"))
+            message.append(String.format("%s Must contain atleast one lower case character\n", type));
+        if (upCase && !strMeta.get("hasUpCase"))
+            message.append(String.format("%s Must contain atleast one upper case character.\n", type));
+        if (specChar && !strMeta.get("hasSpecChar"))
+            message.append(String.format("%s Must contain atleast one special character.\n", type));
+        if (num && !strMeta.get("hasNum"))
+            message.append(String.format("%s Must contain atleast one numerical value.\n", type));
+        if (!message.isEmpty())
+            throw new IOException(message.toString());
+        return true;
+
     }
 
     /**
-     * validates a passord for user login or signup
-     *
-     * @param password account password
-     * @return true if imputed password is valid, false otherwise
+     * @param password Password to be validated
+     * @param minLen   The minimum lingth the password can be.
+     * @param maxLen   The Maximum length the password can be.
+     * @param LowCase  Set true if password must contain atleast one lowercase
+     *                 character, false otherwise.
+     * @param upCase   Set true if password must contain atleast one uppercase
+     *                 character, false otherwise.
+     * @param specChar set true if password must contain atleast one special
+     *                 character, false otherwise.
+     * @param num      ser true if password must contain atleast one numerical
+     *                 value, false otherwise.
+     * @return true if all constraints are satisfied.
+     * @throws IOException If all constraints aren't satisfied.
      * @author Navardo Williams
      */
-    public static boolean validatePassword(String password) {
-        return false;
+    public static boolean validatePassword(String password, int minLen, int maxLen, boolean LowCase, boolean upCase,
+            boolean specChar,
+            boolean num) throws IOException {
+
+        String type = "username";
+        StringBuilder message = new StringBuilder("");
+        if (!Validator.validStrLen(minLen, maxLen, password))
+            message.append(String.format("%s must be between %d and %d\n", type, minLen, maxLen));
+
+        Map<String, Boolean> strMeta = Validator.extractStrMeta(password);
+        if (LowCase && !strMeta.get("hasLoCase"))
+            message.append(String.format("%s Must contain atleast one lower case character\n", type));
+        if (upCase && !strMeta.get("hasUpCase"))
+            message.append(String.format("%s Must contain atleast one upper case character.\n", type));
+        if (specChar && !strMeta.get("hasSpecChar"))
+            message.append(String.format("%s Must contain atleast one special character.\n", type));
+        if (num && !strMeta.get("hasNum"))
+            message.append(String.format("%s Must contain atleast one numerical value.\n", type));
+        if (!message.isEmpty())
+            throw new IOException(message.toString());
+        return true;
+
     }
 
     /**
@@ -455,7 +559,10 @@ class UserValidator {
      * @author Navardo Williams
      */
     public static boolean validateSecretQuestion(String secretQuestion) {
-        return false;
+        if (!Validator.validStrLen(8, 16, secretQuestion)) {
+            return false;
+        }
+        return true;
     }
 
     /**
@@ -466,9 +573,15 @@ class UserValidator {
      * @author Navardo Williams
      */
     public static boolean validateSecretAnswer(String secretAnswer) {
-        return false;
+        if (!Validator.validStrLen(8, 16, secretAnswer)) {
+            return false;
+        }
+        return true;
     }
-    /*class ExecptionExtension extend IOexecption () {} //this can be used to give the exact reason of why it a error occur
-                                                      //instead of just telling them unable to access file we can tel them it's locked by admin or something similar*/
+    /*
+     * class ExecptionExtension extend IOexecption () {} //this can be used to give
+     * the exact reason of why it a error occur
+     * //instead of just telling them unable to access file we can tel them it's
+     * locked by admin or something similar
+     */
 }
-
