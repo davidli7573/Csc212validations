@@ -61,7 +61,7 @@ public final class Validator {
      * @return true if invalid characters are found, false otherwise
      * @author David Li
      */
-    protected boolean hasInvalidCharacters(String value) {
+    protected static boolean hasInvalidCharacters(String value) {
         try {
             if (value == null) {
                 throw new IllegalArgumentException("Value is null.");
