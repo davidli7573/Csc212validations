@@ -89,7 +89,30 @@ class CsvValidator {
      * @author Nadim Siddique
      */
     public boolean validateFile(String fileName, List<String[]> rows, List<Integer> existingYears) {
-        return false;
+        if (!validateFileName(fileName)) {
+            return false;
+        }
+
+        if (rows == null || rows.size() < 2) {
+            return false;
+        }
+
+        if (!validateHeader(rows.get(0))) {
+            return false;
+        }
+
+        for (int i = 1; i < rows.size(); i++) {
+            if (!validateRecord(rows.get(i))) {
+                return false;
+            }
+        }
+
+        if (!validateYearConsistency(rows)) {
+            return false;
+        }
+
+        int year = Integer.parseInt(fileName.substring(0, 4));
+        return validateUniqueFile(year, existingYears);
     }
 
     /**
@@ -100,8 +123,24 @@ class CsvValidator {
      * @author Nadim Siddique
      */
     public boolean validateFileName(String fileName) {
+            if (fileName == null || fileName.length() != 8) {
+            return false;
+        }
 
-        return false;
+        if (!fileName.endsWith(".csv")) {
+            return false;
+        }
+
+        String yearPart = fileName.substring(0, 4);
+
+        for (int i = 0; i < yearPart.length(); i++) {
+            if (!Character.isDigit(yearPart.charAt(i))) {
+                return false;
+            }
+        }
+
+        int year = Integer.parseInt(yearPart);
+        return year > 0;
     }
 
     /**
@@ -113,7 +152,13 @@ class CsvValidator {
      * @author Nadim Siddique
      */
     public boolean validateHeader(String[] header) {
-        return false;
+         if (header == null || header.length != 3) {
+            return false;
+        }
+
+        return header[0].trim().equals("Date")
+                && header[1].trim().equals("Category")
+                && header[2].trim().equals("Amount");
     }
 
     /**
@@ -127,7 +172,29 @@ class CsvValidator {
      *
      */
     public boolean validateRecord(String[] record) {
-        return false;
+       if (record == null || record.length != 3) {
+            return false;
+        }
+
+        String date = record[0].trim();
+        String category = record[1].trim();
+        String amount = record[2].trim();
+
+        if (date.isEmpty() || category.isEmpty() || amount.isEmpty()) {
+            return false;
+        }
+
+        if (!date.matches("\\d{4}-\\d{2}-\\d{2}")) {
+            return false;
+        }
+
+        try {
+            Double.parseDouble(amount);
+        } catch (NumberFormatException e) {
+            return false;
+        }
+
+        return true;
     }
 
     /**
@@ -138,7 +205,27 @@ class CsvValidator {
      * @author Nadim Siddique
      */
     public boolean validateYearConsistency(List<String[]> rows) {
-        return false;
+        if (rows == null || rows.size() < 2) {
+            return false;
+        }
+
+        String firstDate = rows.get(1)[0].trim();
+
+        if (firstDate.length() < 4) {
+            return false;
+        }
+
+        String expectedYear = firstDate.substring(0, 4);
+
+        for (int i = 1; i < rows.size(); i++) {
+            String date = rows.get(i)[0].trim();
+
+            if (date.length() < 4 || !date.substring(0, 4).equals(expectedYear)) {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     /**
@@ -151,7 +238,11 @@ class CsvValidator {
      * @author Nadim Siddique
      */
     public boolean validateUniqueFile(int year, List<Integer> existingYears) {
-        return false;
+       if (existingYears == null) {
+            return true;
+        }
+
+        return !existingYears.contains(year);
     }
 
     /**
