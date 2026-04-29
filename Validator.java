@@ -2,6 +2,7 @@ import java.io.IOException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Scanner;
 
 /**
  * Validator is an abstract superclass that provides common
@@ -14,10 +15,41 @@ import java.util.Map;
  * @author David Li, Masudul Shafi, Nadim Siddique, Navardo Williams
  */
 public final class Validator {
+
     /**
      * Default constructor for Validator.
      */
     private Validator() {
+    }
+
+    /**
+     * @param val    The value entered by the user.
+     * @param minVal The lower bound of all valid input options available.
+     * @param maxVal The upper bound of all valid input options available.
+     * @return true if the value entered by the user is a valid entry, otherwise
+     *         throws an IOException.
+     * @throws IOException
+     * @author Navardo Williams
+     */
+    public static boolean isValidInput(String val, int minVal, int maxVal) throws IOException {
+        StringBuffer message = new StringBuffer("");
+        if (!Validator.isInt(val))
+            message.append("Must enter a numerical value!\n");
+        else {
+            try {
+                int r = Integer.parseInt(val);
+                if (!(r >= minVal && r <= maxVal)) {
+                    message.append("Input value out of range!\n");
+                }
+            } catch (NumberFormatException e) {
+                message.append("input value out of range!\n");
+            }
+        }
+        if (!message.isEmpty())
+            throw new IOException(message.append(String.format((maxVal - minVal) <= 1 ? "Please select %d or %d: "
+                    : "Please select a choice between %d and %d: ",
+                    minVal, maxVal)).toString());
+        return true;
     }
 
     /**
@@ -68,7 +100,8 @@ public final class Validator {
      * @author David Li
      */
     protected static boolean isEmpty(String value) {
-        return text == null || text.trim().isEmpty();
+        // return text == null || text.trim().isEmpty();
+        return true;
     }
 
     /**
@@ -79,10 +112,10 @@ public final class Validator {
      * @author David Li
      */
     protected static boolean isInt(String value) {
-        if (isEmpty(value)) {
+        if (value.isEmpty()) {
             return false;
         }
-        String text = value.trim();       
+        String text = value.trim();
         for (int i = 0; i < text.length(); i++) {
             if (!Character.isDigit(text.charAt(i))) {
                 return false;
@@ -103,9 +136,11 @@ public final class Validator {
     protected static boolean hasInvalidCharacters(String value) {
         if (value == null) {
             return true;
-            }
+        }
         return !value.matches("[a-zA-Z0-9 ,./\\-?!'()]+");
     }
+
+}
 
 /**
  * CsvValidator is responsible for validating CSV files uploaded by the user.
@@ -167,7 +202,7 @@ class CsvValidator {
      * @author Nadim Siddique
      */
     public boolean validateFileName(String fileName) {
-            if (fileName == null || fileName.length() != 8) {
+        if (fileName == null || fileName.length() != 8) {
             return false;
         }
 
@@ -196,7 +231,7 @@ class CsvValidator {
      * @author Nadim Siddique
      */
     public boolean validateHeader(String[] header) {
-         if (header == null || header.length != 3) {
+        if (header == null || header.length != 3) {
             return false;
         }
 
@@ -216,7 +251,7 @@ class CsvValidator {
      *
      */
     public boolean validateRecord(String[] record) {
-       if (record == null || record.length != 3) {
+        if (record == null || record.length != 3) {
             return false;
         }
 
@@ -282,7 +317,7 @@ class CsvValidator {
      * @author Nadim Siddique
      */
     public boolean validateUniqueFile(int year, List<Integer> existingYears) {
-       if (existingYears == null) {
+        if (existingYears == null) {
             return true;
         }
 
@@ -386,7 +421,7 @@ class CsvValidator {
      */
     public boolean checkMissingFields(List<String[]> rows) {
         if (rows == null) {
-        return false;
+            return false;
         }
         for (String[] row : rows) {
             if (row == null) {
@@ -398,7 +433,7 @@ class CsvValidator {
                 }
             }
         }
-    return true;
+        return true;
     }
 
     /**
@@ -455,6 +490,7 @@ class CsvValidator {
         }
         return true;
     }
+}
 
 /**
  * UserValidator
@@ -487,7 +523,8 @@ class UserValidator {
      * @throws IOException If all constraints aren't satisfied.
      * @author Navardo Williams
      */
-    public static boolean validateUserName(String userName, int minLen, int maxLen, boolean LowCase, boolean upCase,
+    public static boolean validateUserName(String userName, int minLen, int maxLen, boolean LowCase,
+            boolean upCase,
             boolean specChar,
             boolean num) throws IOException {
 
@@ -527,7 +564,8 @@ class UserValidator {
      * @throws IOException If all constraints aren't satisfied.
      * @author Navardo Williams
      */
-    public static boolean validatePassword(String password, int minLen, int maxLen, boolean LowCase, boolean upCase,
+    public static boolean validatePassword(String password, int minLen, int maxLen, boolean LowCase,
+            boolean upCase,
             boolean specChar,
             boolean num) throws IOException {
 
@@ -578,10 +616,4 @@ class UserValidator {
         }
         return true;
     }
-    /*
-     * class ExecptionExtension extend IOexecption () {} //this can be used to give
-     * the exact reason of why it a error occur
-     * //instead of just telling them unable to access file we can tel them it's
-     * locked by admin or something similar
-     */
 }
