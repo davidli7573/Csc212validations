@@ -327,7 +327,7 @@ class CsvValidator {
     /**
      * Validates whether a given date field is in the correct format and represents
      * a valid calendar date.
-     * This method checks for proper formatting (e.g., MM/DD/YYYY) and ensures the
+     * This method checks for proper formatting (e.g., YYYY-DD-MM) and ensures the
      * date exists
      * (e.g., rejects invalid dates like February 30 or 12/32/2026).
      *
@@ -337,7 +337,35 @@ class CsvValidator {
      */
 
     boolean validateDate(String date) {
-        // No initialization for now
+        if (date == null || date.trim().isEmpty()) {
+            return false;
+        }
+
+        date = date.trim();
+
+        if (!date.matches("\\d{4}-\\d{2}-\\d{2}")) {
+            return false;
+        }
+
+        String[] parts = date.split("-");
+        int year  = Integer.parseInt(parts[0]);
+        int month = Integer.parseInt(parts[1]);
+        int day   = Integer.parseInt(parts[2]);
+
+        if (year < 1000 || year > 9999) return false;
+        if (month < 1 || month > 12)    return false;
+        if (day < 1)                    return false;
+
+        int[] daysInMonth = {31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
+
+        // check divisible by 4, except centuries unless also div by 400
+        boolean isLeapYear = (year % 4 == 0 && year % 100 != 0) || (year % 400 == 0);
+        if (isLeapYear) {
+            daysInMonth[1] = 29;
+        }
+
+        if (day > daysInMonth[month - 1]) return false;
+
         return true;
     }
 
@@ -352,8 +380,25 @@ class CsvValidator {
      * @author Masudul Shafi
      */
     boolean validateCategory(String category) {
-        // No initialization for now
-        return true;
+        if (category == null || category.trim().isEmpty()) {
+            return false;
+        }
+
+        String[] validCategories = {
+            "Compensation", "Allowance", "Investments", 
+            "Other", "Home", "Utilities", "Food", "Appearance",
+            "Work", "Education", "Transporation",
+            "Entertainment", "Professional Services"
+        };
+
+        String trimmed = category.trim();
+        for (String valid : validCategories) {
+            if (valid.equalsIgnoreCase(trimmed)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**
@@ -367,8 +412,26 @@ class CsvValidator {
      * @author Masudul Shafi
      */
 
-    public boolean validateAmount(double amount) {
-        // No initialization for now
+    public boolean validateAmount(String amount) {
+        if (amount == null || amount.trim().isEmpty()) {
+            return false;
+        }
+
+        String trimmed = amount.trim();
+
+        if (!Validator.isInt(trimmed)) {
+            return false;
+        }
+
+        // check for overflow before the parsing
+        try {
+            int value = Integer.parseInt(trimmed);
+            if (value < 0) return false;
+        } catch (NumberFormatException e) {
+            // number was valid digits but too large for int (overflow)
+            return false;
+        }
+
         return true;
     }
 
@@ -376,7 +439,7 @@ class CsvValidator {
      * Validates that a given value matches the expected data type.
      * This method checks whether the input can be correctly interpreted as the
      * required type
-     * (e.g., integer, double, string, etc).
+     * (e.g., integer, string, etc).
      *
      * @param value        the value to validate
      * @param expectedType the expected data type (e.g., "int", "double", "string")
@@ -384,8 +447,18 @@ class CsvValidator {
      * @author Masudul Shafi
      */
     public boolean validateDataType(String value, String expectedType) {
-        // No initialization for now
-        return true;
+    	if (value == null || expectedType == null) {
+    		return false;
+    	}
+    	
+    	switch (expectedType.toLowerCase().trim()) {
+    		case "int":
+    			return Validator.isInt(value.trim());
+    		case "string": 
+    			return !Validator.isEmpty(value);
+    		default:
+    			return false;
+    	}
     }
 
     /**
