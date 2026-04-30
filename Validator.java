@@ -1,8 +1,13 @@
+package com.hhs.pfm.validation;
+
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Scanner;
+import java.io.File;
+import java.time.Year;
+import java.io.FileNotFoundException;
 
 /**
  * Validator is an abstract superclass that provides common
@@ -91,19 +96,7 @@ public final class Validator {
         }
         return strHm;
     }
-
-    /**
-     * Checks whether a given string is null, empty, or contains only whitespace.
-     *
-     * @param value the string to check
-     * @return true if the value is null or blank, false otherwise
-     * @author David Li
-     */
-    protected static boolean isEmpty(String value) {
-        // return text == null || text.trim().isEmpty();
-        return true;
-    }
-
+    
     /**
      * Checks whether a given string can be parsed as an integer.
      *
@@ -112,7 +105,7 @@ public final class Validator {
      * @author David Li
      */
     protected static boolean isInt(String value) {
-        if (value.isEmpty()) {
+        if (value == null || value.isEmpty()) {
             return false;
         }
         String text = value.trim();
@@ -153,9 +146,43 @@ class CsvValidator {
     /**
      * Default constructor for CsvValidator.
      */
-    private CsvValidator() {
+    CsvValidator() {
     }
-
+    /**
+     * Checks whether the file at the given path exists, is readable, and is non-empty.
+     *
+     * @param filePath the path to the CSV file
+     * @return true if the file is readable and has content, false otherwise
+     * @throws IllegalArgumentException if the path is null, empty, or points to an invalid file
+     * @author David Li
+     */
+    public boolean checkFileReadable(String filePath) {
+        if (filePath == null) {
+            throw new IllegalArgumentException("Error:no File given");
+        }
+        if (filePath.trim().isEmpty()) {
+            throw new IllegalArgumentException("File path cannot be empty.");
+        }
+        File file = new File(filePath);
+        if (!file.exists()) {
+            throw new IllegalArgumentException("File does not exist.");
+        }
+        if (!file.isFile()) {
+            throw new IllegalArgumentException("Path is not a file.");
+        }
+        if (!file.canRead()) {
+            throw new IllegalArgumentException("File cannot be read.");
+        }
+        if (file.length() == 0) {
+            throw new IllegalArgumentException("File is empty.");
+        }
+        try (Scanner scanner = new Scanner(file)) {
+        return scanner.hasNextLine();
+        }
+        catch (FileNotFoundException e) {
+            throw new IllegalArgumentException("File could not be opened.");
+        }
+    }
     /**
      * Validates the entire file by checking file name, header,
      * records, and year consistency.
@@ -172,10 +199,13 @@ class CsvValidator {
             return false;
         }
 
-        if (rows == null || rows.size() < 2) {
-            return false;
+        if (rows == null) {
+            throw new IllegalArgumentException("Rows cannot be null.");
         }
 
+        if (rows.size() < 2) {
+            throw new IllegalArgumentException("CSV file must contain a header and at least one record.");
+        }
         if (!validateHeader(rows.get(0))) {
             return false;
         }
@@ -202,24 +232,32 @@ class CsvValidator {
      * @author Nadim Siddique
      */
     public boolean validateFileName(String fileName) {
-        if (fileName == null || fileName.length() != 8) {
-            return false;
+        final int MIN_YEAR = 1900;
+        final int MAX_YEAR = Year.now().getValue();
+        if (fileName == null || fileName.isEmpty()) {
+            throw new IllegalArgumentException("Error: No File Name Found");
         }
 
         if (!fileName.endsWith(".csv")) {
+            throw new IllegalArgumentException("Error: File Must Be A .CSV File");
+        }
+
+        if (fileName.length() != 8) {
             return false;
         }
 
         String yearPart = fileName.substring(0, 4);
 
-        for (int i = 0; i < yearPart.length(); i++) {
-            if (!Character.isDigit(yearPart.charAt(i))) {
-                return false;
-            }
+        if (!Validator.isInt(yearPart)) {
+            throw new IllegalArgumentException("Error: File Name must be integers");
         }
-
+        
         int year = Integer.parseInt(yearPart);
-        return year > 0;
+
+        if (year < MIN_YEAR || year > MAX_YEAR) {
+            return false;
+        }
+        return true;
     }
 
     /**
@@ -231,13 +269,18 @@ class CsvValidator {
      * @author Nadim Siddique
      */
     public boolean validateHeader(String[] header) {
-        if (header == null || header.length != 3) {
+        if (header == null) {
+            throw new IllegalArgumentException("Header cannot be null.");
+        }
+
+        if (header.length != 3) {
             return false;
         }
 
-        return header[0].trim().equals("Date")
-                && header[1].trim().equals("Category")
-                && header[2].trim().equals("Amount");
+        if (!header[0].trim().equals("Date") || !header[1].trim().equals("Category") || !header[2].trim().equals("Amount")) {
+            return false;
+        }
+        return true;
     }
 
     /**
@@ -251,7 +294,11 @@ class CsvValidator {
      *
      */
     public boolean validateRecord(String[] record) {
-        if (record == null || record.length != 3) {
+        if (record == null) {
+            throw new IllegalArgumentException("Record cannot be null.");
+        }
+
+        if (record.length != 3) {
             return false;
         }
 
@@ -259,20 +306,17 @@ class CsvValidator {
         String category = record[1].trim();
         String amount = record[2].trim();
 
-        if (date.isEmpty() || category.isEmpty() || amount.isEmpty()) {
+        if (!validateDate(date)) {
             return false;
         }
 
-        if (!date.matches("\\d{4}-\\d{2}-\\d{2}")) {
+        if (!validateCategory(category)) {
             return false;
         }
 
-        try {
-            Double.parseDouble(amount);
-        } catch (NumberFormatException e) {
+        if (!validateAmount(amount)) {
             return false;
         }
-
         return true;
     }
 
@@ -284,8 +328,12 @@ class CsvValidator {
      * @author Nadim Siddique
      */
     public boolean validateYearConsistency(List<String[]> rows) {
-        if (rows == null || rows.size() < 2) {
-            return false;
+        if (rows == null) {
+            throw new IllegalArgumentException("Rows cannot be null.");
+        }
+
+        if (rows.size() < 2) {
+            throw new IllegalArgumentException("CSV file must contain at least one record.");
         }
 
         String firstDate = rows.get(1)[0].trim();
@@ -294,12 +342,12 @@ class CsvValidator {
             return false;
         }
 
-        String expectedYear = firstDate.substring(0, 4);
+        String expectedYear = firstDate.substring(6, 10);
 
         for (int i = 1; i < rows.size(); i++) {
             String date = rows.get(i)[0].trim();
 
-            if (date.length() < 4 || !date.substring(0, 4).equals(expectedYear)) {
+            if (date.length() < 4 || !date.substring(6, 10).equals(expectedYear)) {
                 return false;
             }
         }
@@ -327,7 +375,7 @@ class CsvValidator {
     /**
      * Validates whether a given date field is in the correct format and represents
      * a valid calendar date.
-     * This method checks for proper formatting (e.g., YYYY-DD-MM) and ensures the
+     * This method checks for proper formatting (e.g., MM/DD/YYYY) and ensures the
      * date exists
      * (e.g., rejects invalid dates like February 30 or 12/32/2026).
      *
@@ -338,34 +386,39 @@ class CsvValidator {
 
     boolean validateDate(String date) {
         if (date == null || date.trim().isEmpty()) {
-            return false;
-        }
-
+        return false;
+}
+ 
         date = date.trim();
-
-        if (!date.matches("\\d{4}-\\d{2}-\\d{2}")) {
+ 
+        // CHANGED: format is MM/DD/YYYY per the project spec
+        if (!date.matches("\\d{2}/\\d{2}/\\d{4}")) {
             return false;
         }
-
-        String[] parts = date.split("-");
-        int year  = Integer.parseInt(parts[0]);
-        int month = Integer.parseInt(parts[1]);
-        int day   = Integer.parseInt(parts[2]);
-
-        if (year < 1000 || year > 9999) return false;
-        if (month < 1 || month > 12)    return false;
-        if (day < 1)                    return false;
-
+ 
+        String[] parts = date.split("/");
+        int month = Integer.parseInt(parts[0]);
+        int day   = Integer.parseInt(parts[1]);
+        int year  = Integer.parseInt(parts[2]);
+ 
+        if (year < 1000 || year > 9999) {
+            return false;
+        }
+        if (month < 1 || month > 12) {
+            return false;
+        }
+        if (day < 1) {
+            return false;
+        }
         int[] daysInMonth = {31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
-
-        // check divisible by 4, except centuries unless also div by 400
+ 
         boolean isLeapYear = (year % 4 == 0 && year % 100 != 0) || (year % 400 == 0);
         if (isLeapYear) {
             daysInMonth[1] = 29;
         }
-
+ 
         if (day > daysInMonth[month - 1]) return false;
-
+ 
         return true;
     }
 
@@ -387,7 +440,7 @@ class CsvValidator {
         String[] validCategories = {
             "Compensation", "Allowance", "Investments", 
             "Other", "Home", "Utilities", "Food", "Appearance",
-            "Work", "Education", "Transporation",
+            "Work", "Education", "Transportation",
             "Entertainment", "Professional Services"
         };
 
@@ -434,137 +487,7 @@ class CsvValidator {
 
         return true;
     }
-
-    /**
-     * Validates that a given value matches the expected data type.
-     * This method checks whether the input can be correctly interpreted as the
-     * required type
-     * (e.g., integer, string, etc).
-     *
-     * @param value        the value to validate
-     * @param expectedType the expected data type (e.g., "int", "double", "string")
-     * @return true if the value matches the expected data type, false otherwise
-     * @author Masudul Shafi
-     */
-    public boolean validateDataType(String value, String expectedType) {
-    	if (value == null || expectedType == null) {
-    		return false;
-    	}
-    	
-    	switch (expectedType.toLowerCase().trim()) {
-    		case "int":
-    			return Validator.isInt(value.trim());
-    		case "string": 
-    			return !Validator.isEmpty(value);
-    		default:
-    			return false;
-    	}
-    }
-
-    /**
-     * Validates that the file format is correct (a YYYY.csv file).
-     *
-     * @param fileName the name of the file
-     * @return true if the file format is valid, false otherwise
-     * @author David Li
-     */
-    public boolean checkFileFormat(String fileName) {// removing this and changing it
-        if (Validator.isEmpty(fileName)) {
-            return false;
-        }
-        if (!fileName.endsWith(".csv")) {
-            return false;
-        }
-        String year = fileName.substring(0, fileName.length() - 4);
-        if (year.length() != 4) {
-            return false;
-        }
-        if (!Validator.isInt(year)) {
-            return false;
-        }
-        return true;
-    }
-
-    /**
-     * Checks for missing fields in each record.
-     *
-     * @param rows the contents of the CSV file
-     * @return true if all records are filled in, false otherwise
-     * @author David Li
-     */
-    public boolean checkMissingFields(List<String[]> rows) {
-        if (rows == null) {
-            return false;
-        }
-        for (String[] row : rows) {
-            if (row == null) {
-                return false;
-            }
-            for (String field : row) {
-                if (Validator.isEmpty(field)) {
-                    return false;
-                }
-            }
-        }
-        return true;
-    }
-
-    /**
-     * Checks for blank lines in the file.
-     *
-     * @param rows the contents of the CSV file
-     * @return true if no blank lines are found, false otherwise
-     * @author David Li
-     */
-    public boolean checkBlankLines(List<String[]> rows) {
-        if (rows == null) {
-            return false;
-        }
-        for (String[] row : rows) {
-            if (row == null) {
-                return false;
-            }
-            boolean blank = true;
-            for (String field : row) {
-                if (!Validator.isEmpty(field)) {
-                    blank = false;
-                    break;
-                }
-            }
-            if (blank) {
-                return false;
-            }
-        }
-        return true;
-    }
-
-    /**
-     * Ensures that each row contains the correct number of columns.
-     *
-     * @param rows                the contents of the CSV file
-     * @param expectedColumnCount the required number of columns
-     * @return true if all rows have the correct number of columns, false otherwise
-     * @author David Li
-     */
-    public boolean checkColumnCount(List<String[]> rows, int expectedColumnCount) {
-        if (rows == null) {
-            return false;
-        }
-        if (expectedColumnCount <= 0) {
-            return false;
-        }
-        for (String[] row : rows) {
-            if (row == null) {
-                return false;
-            }
-            if (row.length != expectedColumnCount) {
-                return false;
-            }
-        }
-        return true;
-    }
 }
-
 /**
  * UserValidator
  * Utility class UserValidator for validating user input.
