@@ -143,6 +143,14 @@ public final class Validator {
  * @author David Li, Masudul Shafi, Nadim Siddique, Navardo Williams
  */
 class CsvValidator {
+
+    private static final String[] VALID_CATEGORIES = {
+            "Compensation", "Allowance", "Investments", 
+            "Home", "Utilities", "Food", "Appearance",
+            "Work", "Education", "Transportation",
+            "Entertainment", "Professional Services"
+    };
+    
     /**
      * Default constructor for CsvValidator.
      */
@@ -401,9 +409,6 @@ class CsvValidator {
         int day   = Integer.parseInt(parts[1]);
         int year  = Integer.parseInt(parts[2]);
  
-        if (year < 1000 || year > 9999) {
-            return false;
-        }
         if (month < 1 || month > 12) {
             return false;
         }
@@ -437,15 +442,8 @@ class CsvValidator {
             return false;
         }
 
-        String[] validCategories = {
-            "Compensation", "Allowance", "Investments", 
-            "Other", "Home", "Utilities", "Food", "Appearance",
-            "Work", "Education", "Transportation",
-            "Entertainment", "Professional Services"
-        };
-
         String trimmed = category.trim();
-        for (String valid : validCategories) {
+        for (String valid : VALID_CATEGORIES) {
             if (valid.equalsIgnoreCase(trimmed)) {
                 return true;
             }
@@ -460,7 +458,7 @@ class CsvValidator {
      * This method checks that the amount is a valid number,
      * is not negative (if disallowed), and falls within any defined limits.
      *
-     * @param amount the value as a int
+     * @param amount the value as a String to validate
      * @return true if the value is valid, false otherwise
      * @author Masudul Shafi
      */
