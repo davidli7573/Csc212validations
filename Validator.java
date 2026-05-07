@@ -67,7 +67,7 @@ public final class Validator {
      * @author Navardo Williams
      */
     public static boolean validStrLen(int minLen, int maxLen, String str) {
-        return (minLen <= str.length() && maxLen >= str.length()) ? true : false;
+        return (minLen <= str.length() && maxLen >= str.length() && str != null) ? true : false;
     }
 
     /**
@@ -81,6 +81,8 @@ public final class Validator {
                 "hasUpCase", false,
                 "hasSpecChar", false,
                 "hasNum", false));
+        if (str == null || str.length() == 0)
+            return strHm;
         for (char c : str.toCharArray()) {
             if (!strHm.get("hasUpCase") && Character.isUpperCase(c))
                 strHm.put("hasUpCase", true);
@@ -96,7 +98,7 @@ public final class Validator {
         }
         return strHm;
     }
-    
+
     /**
      * Checks whether a given string can be parsed as an integer.
      *
@@ -145,23 +147,26 @@ public final class Validator {
 class CsvValidator {
 
     private static final String[] VALID_CATEGORIES = {
-            "Compensation", "Allowance", "Investments", 
+            "Compensation", "Allowance", "Investments",
             "Home", "Utilities", "Food", "Appearance",
             "Work", "Education", "Transportation",
             "Entertainment", "Professional Services"
     };
-    
+
     /**
      * Default constructor for CsvValidator.
      */
     CsvValidator() {
     }
+
     /**
-     * Checks whether the file at the given path exists, is readable, and is non-empty.
+     * Checks whether the file at the given path exists, is readable, and is
+     * non-empty.
      *
      * @param filePath the path to the CSV file
      * @return true if the file is readable and has content, false otherwise
-     * @throws IllegalArgumentException if the path is null, empty, or points to an invalid file
+     * @throws IllegalArgumentException if the path is null, empty, or points to an
+     *                                  invalid file
      * @author David Li
      */
     public boolean checkFileReadable(String filePath) {
@@ -185,12 +190,12 @@ class CsvValidator {
             throw new IllegalArgumentException("File is empty.");
         }
         try (Scanner scanner = new Scanner(file)) {
-        return scanner.hasNextLine();
-        }
-        catch (FileNotFoundException e) {
+            return scanner.hasNextLine();
+        } catch (FileNotFoundException e) {
             throw new IllegalArgumentException("File could not be opened.");
         }
     }
+
     /**
      * Validates the entire file by checking file name, header,
      * records, and year consistency.
@@ -259,7 +264,7 @@ class CsvValidator {
         if (!Validator.isInt(yearPart)) {
             throw new IllegalArgumentException("Error: File Name must be integers");
         }
-        
+
         int year = Integer.parseInt(yearPart);
 
         if (year < MIN_YEAR || year > MAX_YEAR) {
@@ -285,7 +290,8 @@ class CsvValidator {
             return false;
         }
 
-        if (!header[0].trim().equals("Date") || !header[1].trim().equals("Category") || !header[2].trim().equals("Amount")) {
+        if (!header[0].trim().equals("Date") || !header[1].trim().equals("Category")
+                || !header[2].trim().equals("Amount")) {
             return false;
         }
         return true;
@@ -394,36 +400,37 @@ class CsvValidator {
 
     boolean validateDate(String date) {
         if (date == null || date.trim().isEmpty()) {
-        return false;
-}
- 
+            return false;
+        }
+
         date = date.trim();
- 
+
         // CHANGED: format is MM/DD/YYYY per the project spec
         if (!date.matches("\\d{2}/\\d{2}/\\d{4}")) {
             return false;
         }
- 
+
         String[] parts = date.split("/");
         int month = Integer.parseInt(parts[0]);
-        int day   = Integer.parseInt(parts[1]);
-        int year  = Integer.parseInt(parts[2]);
- 
+        int day = Integer.parseInt(parts[1]);
+        int year = Integer.parseInt(parts[2]);
+
         if (month < 1 || month > 12) {
             return false;
         }
         if (day < 1) {
             return false;
         }
-        int[] daysInMonth = {31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
- 
+        int[] daysInMonth = { 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31 };
+
         boolean isLeapYear = (year % 4 == 0 && year % 100 != 0) || (year % 400 == 0);
         if (isLeapYear) {
             daysInMonth[1] = 29;
         }
- 
-        if (day > daysInMonth[month - 1]) return false;
- 
+
+        if (day > daysInMonth[month - 1])
+            return false;
+
         return true;
     }
 
@@ -477,7 +484,8 @@ class CsvValidator {
         // check for overflow before the parsing
         try {
             int value = Integer.parseInt(trimmed);
-            if (value < 0) return false;
+            if (value < 0)
+                return false;
         } catch (NumberFormatException e) {
             // number was valid digits but too large for int (overflow)
             return false;
@@ -486,6 +494,7 @@ class CsvValidator {
         return true;
     }
 }
+
 /**
  * UserValidator
  * Utility class UserValidator for validating user input.
@@ -505,22 +514,22 @@ class UserValidator {
      * @param userName The username to be validated
      * @param minLen   The minimum length the username can be.
      * @param maxLen   The Maximum length the username can be.
-     * @param LowCase  Set true if userName must contain atleast one lowercase
+     * @param LowCase  Set true if userName must contain at least one lowercase
      *                 character, false otherwise.
-     * @param upCase   Set true if userName must contain atleast one uppercase
+     * @param upCase   Set true if userName must contain at least one uppercase
      *                 character, false otherwise.
-     * @param specChar set true if userName must contain atleast one special
+     * @param specChar set true if userName must contain at least one special
      *                 character, false otherwise.
-     * @param num      ser true if userName must contain atleast one numerical
+     * @param num      ser true if userName must contain at least one numerical
      *                 value, false otherwise.
      * @return true if all constraints are satisfied.
-     * @throws IOException If all constraints aren't satisfied.
+     * @throws IllegalArgumentException If all constraints aren't satisfied.
      * @author Navardo Williams
      */
     public static boolean validateUserName(String userName, int minLen, int maxLen, boolean LowCase,
             boolean upCase,
             boolean specChar,
-            boolean num) throws IOException {
+            boolean num) throws IllegalArgumentException {
 
         String type = "username";
         StringBuilder message = new StringBuilder("");
@@ -529,56 +538,56 @@ class UserValidator {
 
         Map<String, Boolean> strMeta = Validator.extractStrMeta(userName);
         if (LowCase && !strMeta.get("hasLoCase"))
-            message.append(String.format("%s Must contain atleast one lower case character\n", type));
+            message.append(String.format("%s Must contain at least one lower case character\n", type));
         if (upCase && !strMeta.get("hasUpCase"))
-            message.append(String.format("%s Must contain atleast one upper case character.\n", type));
+            message.append(String.format("%s Must contain at least one upper case character.\n", type));
         if (specChar && !strMeta.get("hasSpecChar"))
-            message.append(String.format("%s Must contain atleast one special character.\n", type));
+            message.append(String.format("%s Must contain at least one special character.\n", type));
         if (num && !strMeta.get("hasNum"))
-            message.append(String.format("%s Must contain atleast one numerical value.\n", type));
+            message.append(String.format("%s Must contain at least one numerical value.\n", type));
         if (!message.isEmpty())
-            throw new IOException(message.toString());
+            throw new IllegalArgumentException(message.toString());
         return true;
 
     }
 
     /**
      * @param password Password to be validated
-     * @param minLen   The minimum lingth the password can be.
+     * @param minLen   The minimum length the password can be.
      * @param maxLen   The Maximum length the password can be.
-     * @param LowCase  Set true if password must contain atleast one lowercase
+     * @param lowCase  Set true if password must contain at least one lowercase
      *                 character, false otherwise.
-     * @param upCase   Set true if password must contain atleast one uppercase
+     * @param upCase   Set true if password must contain at least one uppercase
      *                 character, false otherwise.
-     * @param specChar set true if password must contain atleast one special
+     * @param specChar set true if password must contain at least one special
      *                 character, false otherwise.
-     * @param num      ser true if password must contain atleast one numerical
+     * @param num      ser true if password must contain at least one numerical
      *                 value, false otherwise.
      * @return true if all constraints are satisfied.
-     * @throws IOException If all constraints aren't satisfied.
+     * @throws IllegalArgumentException If all constraints aren't satisfied.
      * @author Navardo Williams
      */
-    public static boolean validatePassword(String password, int minLen, int maxLen, boolean LowCase,
+    public static boolean validatePassword(String password, int minLen, int maxLen, boolean lowCase,
             boolean upCase,
             boolean specChar,
-            boolean num) throws IOException {
+            boolean num) throws IllegalArgumentException {
 
-        String type = "username";
+        String type = "Password";
         StringBuilder message = new StringBuilder("");
         if (!Validator.validStrLen(minLen, maxLen, password))
             message.append(String.format("%s must be between %d and %d\n", type, minLen, maxLen));
 
         Map<String, Boolean> strMeta = Validator.extractStrMeta(password);
-        if (LowCase && !strMeta.get("hasLoCase"))
-            message.append(String.format("%s Must contain atleast one lower case character\n", type));
+        if (lowCase && !strMeta.get("hasLoCase"))
+            message.append(String.format("%s Must contain at least one lower case character\n", type));
         if (upCase && !strMeta.get("hasUpCase"))
-            message.append(String.format("%s Must contain atleast one upper case character.\n", type));
+            message.append(String.format("%s Must contain at least one upper case character.\n", type));
         if (specChar && !strMeta.get("hasSpecChar"))
-            message.append(String.format("%s Must contain atleast one special character.\n", type));
+            message.append(String.format("%s Must contain at least one special character.\n", type));
         if (num && !strMeta.get("hasNum"))
-            message.append(String.format("%s Must contain atleast one numerical value.\n", type));
+            message.append(String.format("%s Must contain at least one numerical value.\n", type));
         if (!message.isEmpty())
-            throw new IOException(message.toString());
+            throw new IllegalArgumentException(message.toString());
         return true;
 
     }
