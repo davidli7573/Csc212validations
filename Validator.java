@@ -1,11 +1,11 @@
+import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.time.Year;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Scanner;
-import java.io.File;
-import java.time.Year;
-import java.io.FileNotFoundException;
 
 /**
  * Validator is an abstract superclass that provides common
@@ -102,7 +102,7 @@ public final class Validator {
      * @return true if the value represents a valid integer, false otherwise
      * @author David Li
      */
-    protected static boolean isInt(String value) {
+    public static boolean isInt(String value) {
         if (value == null || value.isEmpty()) {
             return false;
         }
@@ -124,11 +124,16 @@ public final class Validator {
      * @return true if invalid characters are found, false otherwise
      * @author David Li
      */
-    protected static boolean hasInvalidCharacters(String value) {
+    public static boolean hasInvalidCharacters(String value) {
         if (value == null) {
             return true;
         }
-        return !value.matches("[a-zA-Z0-9 ,./\\-?!'()]+");
+        for (char c : value.toCharArray()) {
+            if (c < 32 || c > 126) {
+                return true;
+            }
+        }
+        return false;
     }
 
 }
@@ -141,6 +146,24 @@ public final class Validator {
  * @author David Li, Masudul Shafi, Nadim Siddique, Navardo Williams
  */
 class CsvValidator {
+    final static int EXPECTED_NAME_LENGTH = 8;
+    final static int MIN_YEAR= 1900;
+    final static int MAX_YEAR = Year.now().getValue();
+    static final String[] INCOME_CATEGORIES = {
+    "Compensation", "Allowance", "Investments"
+};
+
+    static final String[] EXPENSE_CATEGORIES = {
+    "Home", "Utilities", "Food", "Appearance",
+    "Work", "Education", "Transportation",
+    "Entertainment", "Professional Services"
+};
+    static final String[] VALIDCATEGORIES = {
+        "Compensation", "Allowance", "Investments", 
+        "Home", "Utilities", "Food", "Appearance",
+        "Work", "Education", "Transportation",
+        "Entertainment", "Professional Services", "Other"
+    };
     /**
      * Default constructor for CsvValidator.
      */
@@ -150,7 +173,7 @@ class CsvValidator {
      * Checks whether the file at the given path exists, is readable, and is non-empty.
      *
      * @param filePath the path to the CSV file
-     * @return true if the file is readable and has content, false otherwise
+     * @return true if the file is readable and has content and contains at least one line
      * @throws IllegalArgumentException if the path is null, empty, or points to an invalid file
      * @author David Li
      */
@@ -175,7 +198,7 @@ class CsvValidator {
             throw new IllegalArgumentException("File is empty.");
         }
         try (Scanner scanner = new Scanner(file)) {
-        return scanner.hasNextLine();
+            return scanner.hasNextLine();
         }
         catch (FileNotFoundException e) {
             throw new IllegalArgumentException("File could not be opened.");
@@ -189,19 +212,17 @@ class CsvValidator {
      * @param rows          the contents of the CSV file where each row is split
      *                      into fields
      * @param existingYears list of years already stored for the user
+     * @throws IllegalArgumentException if row doesn't exist or missing field
      * @return true if the file passes all validation checks, false otherwise
      * @author Nadim Siddique
      */
     public boolean validateFile(String fileName, List<String[]> rows, List<Integer> existingYears) {
-
         if (rows == null) {
-            System.out.println("Rows cannot be null.");
-            return false;
+            throw new IllegalArgumentException("no rows given");
         }
 
         if (rows.size() < 2) {
-            System.out.println("CSV file must contain a header and at least one record.");
-            return false;
+            throw new IllegalArgumentException("missing field on row");
         }
 
         if (!validateFileName(fileName)) {
@@ -219,7 +240,7 @@ class CsvValidator {
         }
 
         if (!validateYearConsistency(rows)) {
-            return false;
+            return !validateYearConsistency(rows);
         }
 
         int year = Integer.parseInt(fileName.substring(0, 4));
@@ -238,11 +259,11 @@ class CsvValidator {
     public boolean validateFileName(String fileName) {
 
         if (fileName == null || fileName.isEmpty()) {
-            return false;
+            throw new IllegalArgumentException("No given file name or empty");
         }
 
         if (!fileName.endsWith(".csv")) {
-            return false;
+            throw new IllegalArgumentException("file type is not .csv");
         }
 
         // Expected format is YYYY.csv, which is exactly 8 characters.
@@ -270,36 +291,31 @@ class CsvValidator {
      * Date, Category, Amount
      *
      * @param header the first row of the CSV file
-     * @return true if the header is correct, false otherwise
+     * @throws IllegalArgumentException if the header doesn't follow the format
+     * @return true if header follows Date, Category, Amount
      * @author Nadim Siddique
      */
     public boolean validateHeader(String[] header) {
 
         if (header == null) {
-            System.out.println("Header cannot be null.");
-            return false;
+            throw new IllegalArgumentException("Header cannot be null.");
         }
 
         if (header.length != 3) {
-            System.out.println("Header must contain exactly 3 columns.");
-            return false;
+            throw new IllegalArgumentException("Header must contain exactly 3 columns.");
         }
 
         if (!header[0].trim().equals("Date")) {
-            System.out.println("Invalid header column 1. Expected Date.");
-            return false;
+            throw new IllegalArgumentException("Invalid header column 1. Expected Date.");
         }
 
         if (!header[1].trim().equals("Category")) {
-            System.out.println("Invalid header column 2. Expected Category.");
-            return false;
+            throw new IllegalArgumentException("Invalid header column 2. Expected Category.");
         }
 
         if (!header[2].trim().equals("Amount")) {
-            System.out.println("Invalid header column 3. Expected Amount.");
-            return false;
+            throw new IllegalArgumentException("Invalid header column 3. Expected Amount.");
         }
-
         return true;
     }
 
@@ -375,13 +391,11 @@ class CsvValidator {
     public boolean validateYearConsistency(List<String[]> rows) {
 
         if (rows == null) {
-            System.out.println("Rows cannot be null.");
-            return false;
+            throw new IllegalArgumentException("Rows cannot be null.");
         }
 
         if (rows.size() < 2) {
-            System.out.println("CSV file must contain at least one record.");
-            return false;
+            throw new IllegalArgumentException("CSV file must contain at least one record.");
         }
 
         if (rows.get(1) == null || rows.get(1).length == 0) {
@@ -433,7 +447,6 @@ class CsvValidator {
         }
 
         return !existingYears.contains(year);
-        
     }
     /**
      * Validates whether a given date field is in the correct format and represents
@@ -464,7 +477,7 @@ class CsvValidator {
         int day   = Integer.parseInt(parts[1]);
         int year  = Integer.parseInt(parts[2]);
  
-        if (year < 1000 || year > 9999) {
+        if (year < MIN_YEAR || year > MAX_YEAR) {
             return false;
         }
         if (month < 1 || month > 12) {
@@ -500,15 +513,8 @@ class CsvValidator {
             return false;
         }
 
-        String[] validCategories = {
-            "Compensation", "Allowance", "Investments", 
-            "Other", "Home", "Utilities", "Food", "Appearance",
-            "Work", "Education", "Transportation",
-            "Entertainment", "Professional Services"
-        };
-
         String trimmed = category.trim();
-        for (String valid : validCategories) {
+        for (String valid : VALIDCATEGORIES) {
             if (valid.equalsIgnoreCase(trimmed)) {
                 return true;
             }
