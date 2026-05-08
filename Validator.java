@@ -1,11 +1,11 @@
-
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.time.Year;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Scanner;
-import java.io.File;
-import java.time.Year;
-import java.io.FileNotFoundException;
 
 /**
  * Validator is an abstract superclass that provides common
@@ -66,7 +66,7 @@ public final class Validator {
      * @author Navardo Williams
      */
     public static boolean validStrLen(int minLen, int maxLen, String str) {
-        return (minLen <= str.length() && maxLen >= str.length() && str != null) ? true : false;
+        return (minLen <= str.length() && maxLen >= str.length()) ? true : false;
     }
 
     /**
@@ -80,8 +80,6 @@ public final class Validator {
                 "hasUpCase", false,
                 "hasSpecChar", false,
                 "hasNum", false));
-        if (str == null || str.length() == 0)
-            return strHm;
         for (char c : str.toCharArray()) {
             if (!strHm.get("hasUpCase") && Character.isUpperCase(c))
                 strHm.put("hasUpCase", true);
@@ -97,7 +95,7 @@ public final class Validator {
         }
         return strHm;
     }
-
+    
     /**
      * Checks whether a given string can be parsed as an integer.
      *
@@ -105,7 +103,7 @@ public final class Validator {
      * @return true if the value represents a valid integer, false otherwise
      * @author David Li
      */
-    protected static boolean isInt(String value) {
+    public static boolean isInt(String value) {
         if (value == null || value.isEmpty()) {
             return false;
         }
@@ -127,11 +125,16 @@ public final class Validator {
      * @return true if invalid characters are found, false otherwise
      * @author David Li
      */
-    protected static boolean hasInvalidCharacters(String value) {
+    public static boolean hasInvalidCharacters(String value) {
         if (value == null) {
             return true;
         }
-        return !value.matches("[a-zA-Z0-9 ,./\\-?!'()]+");
+        for (char c : value.toCharArray()) {
+            if (c < 32 || c > 126) {
+                return true;
+            }
+        }
+        return false;
     }
 
 }
@@ -144,28 +147,35 @@ public final class Validator {
  * @author David Li, Masudul Shafi, Nadim Siddique, Navardo Williams
  */
 class CsvValidator {
+    final static int EXPECTED_NAME_LENGTH = 8;
+    final static int MIN_YEAR= 1900;
+    final static int MAX_YEAR = Year.now().getValue();
+    static final String[] INCOME_CATEGORIES = {
+    "Compensation", "Allowance", "Investments"
+};
 
-    private static final String[] VALID_CATEGORIES = {
-            "Compensation", "Allowance", "Investments",
-            "Home", "Utilities", "Food", "Appearance",
-            "Work", "Education", "Transportation",
-            "Entertainment", "Professional Services"
+    static final String[] EXPENSE_CATEGORIES = {
+    "Home", "Utilities", "Food", "Appearance",
+    "Work", "Education", "Transportation",
+    "Entertainment", "Professional Services"
+};
+    static final String[] VALIDCATEGORIES = {
+        "Compensation", "Allowance", "Investments", 
+        "Home", "Utilities", "Food", "Appearance",
+        "Work", "Education", "Transportation",
+        "Entertainment", "Professional Services", "Other"
     };
-
     /**
      * Default constructor for CsvValidator.
      */
     CsvValidator() {
     }
-
     /**
-     * Checks whether the file at the given path exists, is readable, and is
-     * non-empty.
+     * Checks whether the file at the given path exists, is readable, and is non-empty.
      *
      * @param filePath the path to the CSV file
-     * @return true if the file is readable and has content, false otherwise
-     * @throws IllegalArgumentException if the path is null, empty, or points to an
-     *                                  invalid file
+     * @return true if the file is readable and has content and contains at least one line
+     * @throws IllegalArgumentException if the path is null, empty, or points to an invalid file
      * @author David Li
      */
     public boolean checkFileReadable(String filePath) {
@@ -190,11 +200,11 @@ class CsvValidator {
         }
         try (Scanner scanner = new Scanner(file)) {
             return scanner.hasNextLine();
-        } catch (FileNotFoundException e) {
+        }
+        catch (FileNotFoundException e) {
             throw new IllegalArgumentException("File could not be opened.");
         }
     }
-
     /**
      * Validates the entire file by checking file name, header,
      * records, and year consistency.
@@ -203,21 +213,23 @@ class CsvValidator {
      * @param rows          the contents of the CSV file where each row is split
      *                      into fields
      * @param existingYears list of years already stored for the user
+     * @throws IllegalArgumentException if row doesn't exist or missing field
      * @return true if the file passes all validation checks, false otherwise
      * @author Nadim Siddique
      */
     public boolean validateFile(String fileName, List<String[]> rows, List<Integer> existingYears) {
+        if (rows == null) {
+            throw new IllegalArgumentException("no rows given");
+        }
+
+        if (rows.size() < 2) {
+            throw new IllegalArgumentException("missing field on row");
+        }
+
         if (!validateFileName(fileName)) {
             return false;
         }
 
-        if (rows == null) {
-            throw new IllegalArgumentException("Rows cannot be null.");
-        }
-
-        if (rows.size() < 2) {
-            throw new IllegalArgumentException("CSV file must contain a header and at least one record.");
-        }
         if (!validateHeader(rows.get(0))) {
             return false;
         }
@@ -229,7 +241,7 @@ class CsvValidator {
         }
 
         if (!validateYearConsistency(rows)) {
-            return false;
+            return !validateYearConsistency(rows);
         }
 
         int year = Integer.parseInt(fileName.substring(0, 4));
@@ -241,27 +253,29 @@ class CsvValidator {
      *
      * @param fileName the name of the file
      * @return true if the file name is valid, false otherwise
+     * @bug [Issue #12] fixed crashing application on invalid file extension
+     *      by returning a boolean instead of throws so MainMenu.java accepts it
      * @author Nadim Siddique
      */
     public boolean validateFileName(String fileName) {
-        final int MIN_YEAR = 1900;
-        final int MAX_YEAR = Year.now().getValue();
+
         if (fileName == null || fileName.isEmpty()) {
-            throw new IllegalArgumentException("Error: No File Name Found");
+            throw new IllegalArgumentException("No given file name or empty");
         }
 
         if (!fileName.endsWith(".csv")) {
-            throw new IllegalArgumentException("Error: File Must Be A .CSV File");
+            throw new IllegalArgumentException("file type is not .csv");
         }
 
-        if (fileName.length() != 8) {
+        // Expected format is YYYY.csv, which is exactly 8 characters.
+        if (fileName.length() != EXPECTED_NAME_LENGTH) {
             return false;
         }
 
         String yearPart = fileName.substring(0, 4);
 
         if (!Validator.isInt(yearPart)) {
-            throw new IllegalArgumentException("Error: File Name must be integers");
+            return false;
         }
 
         int year = Integer.parseInt(yearPart);
@@ -269,29 +283,39 @@ class CsvValidator {
         if (year < MIN_YEAR || year > MAX_YEAR) {
             return false;
         }
+
         return true;
     }
 
     /**
-     * Validates that the header row matches the required format:
+     * Validates that the header row matches the required case-sensitive format:
      * Date, Category, Amount
      *
      * @param header the first row of the CSV file
-     * @return true if the header is correct, false otherwise
+     * @throws IllegalArgumentException if the header doesn't follow the format
+     * @return true if header follows Date, Category, Amount
      * @author Nadim Siddique
      */
     public boolean validateHeader(String[] header) {
+
         if (header == null) {
             throw new IllegalArgumentException("Header cannot be null.");
         }
 
         if (header.length != 3) {
-            return false;
+            throw new IllegalArgumentException("Header must contain exactly 3 columns.");
         }
 
-        if (!header[0].trim().equals("Date") || !header[1].trim().equals("Category")
-                || !header[2].trim().equals("Amount")) {
-            return false;
+        if (!header[0].trim().equals("Date")) {
+            throw new IllegalArgumentException("Invalid header column 1. Expected Date.");
+        }
+
+        if (!header[1].trim().equals("Category")) {
+            throw new IllegalArgumentException("Invalid header column 2. Expected Category.");
+        }
+
+        if (!header[2].trim().equals("Amount")) {
+            throw new IllegalArgumentException("Invalid header column 3. Expected Amount.");
         }
         return true;
     }
@@ -300,19 +324,28 @@ class CsvValidator {
      * Validates a single record (row) in the CSV file.
      * A valid record must contain exactly three values:
      * date, category, and amount.
+     * The date must be in the format DD/MM/YYYY and represent a valid calendar date.
+     * The category must be one of the predefined income or expense categories.
+     * The amount must be a valid integer (positive for income, negative for expenses).
+     *
+     * The invalid-character check is applied to every field, so its regex
+     * must stay compatible with valid date, category, and amount formats.
+     * The "Other" category is allowed to use either a positive or negative amount.
      *
      * @param record the row to validate
      * @return true if the record is valid, false otherwise
      * @author Nadim Siddique
-     *
      */
     public boolean validateRecord(String[] record) {
-        if (record == null) {
-            throw new IllegalArgumentException("Record cannot be null.");
+
+        if (record == null || record.length != 3) {
+            return false;
         }
 
-        if (record.length != 3) {
-            return false;
+        for (String field : record) {
+            if (Validator.hasInvalidCharacters(field)) {
+                return false;
+            }
         }
 
         String date = record[0].trim();
@@ -330,6 +363,22 @@ class CsvValidator {
         if (!validateAmount(amount)) {
             return false;
         }
+
+        // Safe to parse here since validateAmount confirms the amount is valid.
+        int value = Integer.parseInt(amount);
+
+        for (String income : INCOME_CATEGORIES) {
+            if (category.equalsIgnoreCase(income) && value < 0) {
+                return false;
+            }
+        }
+
+        for (String expense : EXPENSE_CATEGORIES) {
+            if (category.equalsIgnoreCase(expense) && value > 0) {
+                return false;
+            }
+        }
+
         return true;
     }
 
@@ -341,6 +390,7 @@ class CsvValidator {
      * @author Nadim Siddique
      */
     public boolean validateYearConsistency(List<String[]> rows) {
+
         if (rows == null) {
             throw new IllegalArgumentException("Rows cannot be null.");
         }
@@ -349,18 +399,28 @@ class CsvValidator {
             throw new IllegalArgumentException("CSV file must contain at least one record.");
         }
 
+        if (rows.get(1) == null || rows.get(1).length == 0) {
+            return false;
+        }
+
         String firstDate = rows.get(1)[0].trim();
 
-        if (firstDate.length() < 4) {
+        if (firstDate.length() < 10) {
             return false;
         }
 
         String expectedYear = firstDate.substring(6, 10);
 
         for (int i = 1; i < rows.size(); i++) {
+
+            if (rows.get(i) == null || rows.get(i).length == 0) {
+                return false;
+            }
+
             String date = rows.get(i)[0].trim();
 
-            if (date.length() < 4 || !date.substring(6, 10).equals(expectedYear)) {
+            if (date.length() < 10 ||
+                !date.substring(6, 10).equals(expectedYear)) {
                 return false;
             }
         }
@@ -378,13 +438,17 @@ class CsvValidator {
      * @author Nadim Siddique
      */
     public boolean validateUniqueFile(int year, List<Integer> existingYears) {
+
+        if (year <= 0) {
+            return false;
+        }
+
         if (existingYears == null) {
             return true;
         }
 
         return !existingYears.contains(year);
     }
-
     /**
      * Validates whether a given date field is in the correct format and represents
      * a valid calendar date.
@@ -399,37 +463,39 @@ class CsvValidator {
 
     boolean validateDate(String date) {
         if (date == null || date.trim().isEmpty()) {
-            return false;
-        }
-
+        return false;
+}
+ 
         date = date.trim();
-
+ 
         // CHANGED: format is MM/DD/YYYY per the project spec
         if (!date.matches("\\d{2}/\\d{2}/\\d{4}")) {
             return false;
         }
-
+ 
         String[] parts = date.split("/");
         int month = Integer.parseInt(parts[0]);
-        int day = Integer.parseInt(parts[1]);
-        int year = Integer.parseInt(parts[2]);
-
+        int day   = Integer.parseInt(parts[1]);
+        int year  = Integer.parseInt(parts[2]);
+ 
+        if (year < MIN_YEAR || year > MAX_YEAR) {
+            return false;
+        }
         if (month < 1 || month > 12) {
             return false;
         }
         if (day < 1) {
             return false;
         }
-        int[] daysInMonth = { 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31 };
-
+        int[] daysInMonth = {31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
+ 
         boolean isLeapYear = (year % 4 == 0 && year % 100 != 0) || (year % 400 == 0);
         if (isLeapYear) {
             daysInMonth[1] = 29;
         }
-
-        if (day > daysInMonth[month - 1])
-            return false;
-
+ 
+        if (day > daysInMonth[month - 1]) return false;
+ 
         return true;
     }
 
@@ -449,7 +515,7 @@ class CsvValidator {
         }
 
         String trimmed = category.trim();
-        for (String valid : VALID_CATEGORIES) {
+        for (String valid : VALIDCATEGORIES) {
             if (valid.equalsIgnoreCase(trimmed)) {
                 return true;
             }
@@ -464,11 +530,10 @@ class CsvValidator {
      * This method checks that the amount is a valid number,
      * is not negative (if disallowed), and falls within any defined limits.
      *
-     * @param amount the value as a String to validate
+     * @param amount the value as a int
      * @return true if the value is valid, false otherwise
      * @author Masudul Shafi
      */
-
     public boolean validateAmount(String amount) {
         if (amount == null || amount.trim().isEmpty()) {
             return false;
@@ -476,24 +541,25 @@ class CsvValidator {
 
         String trimmed = amount.trim();
 
-        if (!Validator.isInt(trimmed)) {
+        // allows a leading minus for expenses
+        String digits = trimmed.startsWith("-") ? trimmed.substring(1) : trimmed;
+
+
+        // must be valid integer digits after removing the sign
+        if (digits.isEmpty() || !Validator.isInt(digits)) {
             return false;
         }
 
         // check for overflow before the parsing
         try {
-            int value = Integer.parseInt(trimmed);
-            if (value < 0)
-                return false;
+            Integer.parseInt(trimmed);
         } catch (NumberFormatException e) {
-            // number was valid digits but too large for int (overflow)
             return false;
         }
 
         return true;
-    }
+    } 
 }
-
 /**
  * UserValidator
  * Utility class UserValidator for validating user input.
@@ -513,22 +579,22 @@ class UserValidator {
      * @param userName The username to be validated
      * @param minLen   The minimum length the username can be.
      * @param maxLen   The Maximum length the username can be.
-     * @param LowCase  Set true if userName must contain at least one lowercase
+     * @param LowCase  Set true if userName must contain atleast one lowercase
      *                 character, false otherwise.
-     * @param upCase   Set true if userName must contain at least one uppercase
+     * @param upCase   Set true if userName must contain atleast one uppercase
      *                 character, false otherwise.
-     * @param specChar set true if userName must contain at least one special
+     * @param specChar set true if userName must contain atleast one special
      *                 character, false otherwise.
-     * @param num      ser true if userName must contain at least one numerical
+     * @param num      ser true if userName must contain atleast one numerical
      *                 value, false otherwise.
      * @return true if all constraints are satisfied.
-     * @throws IllegalArgumentException If all constraints aren't satisfied.
+     * @throws IOException If all constraints aren't satisfied.
      * @author Navardo Williams
      */
     public static boolean validateUserName(String userName, int minLen, int maxLen, boolean LowCase,
             boolean upCase,
             boolean specChar,
-            boolean num) throws IllegalArgumentException {
+            boolean num) throws IOException {
 
         String type = "username";
         StringBuilder message = new StringBuilder("");
@@ -537,56 +603,56 @@ class UserValidator {
 
         Map<String, Boolean> strMeta = Validator.extractStrMeta(userName);
         if (LowCase && !strMeta.get("hasLoCase"))
-            message.append(String.format("%s Must contain at least one lower case character\n", type));
+            message.append(String.format("%s Must contain atleast one lower case character\n", type));
         if (upCase && !strMeta.get("hasUpCase"))
-            message.append(String.format("%s Must contain at least one upper case character.\n", type));
+            message.append(String.format("%s Must contain atleast one upper case character.\n", type));
         if (specChar && !strMeta.get("hasSpecChar"))
-            message.append(String.format("%s Must contain at least one special character.\n", type));
+            message.append(String.format("%s Must contain atleast one special character.\n", type));
         if (num && !strMeta.get("hasNum"))
-            message.append(String.format("%s Must contain at least one numerical value.\n", type));
+            message.append(String.format("%s Must contain atleast one numerical value.\n", type));
         if (!message.isEmpty())
-            throw new IllegalArgumentException(message.toString());
+            throw new IOException(message.toString());
         return true;
 
     }
 
     /**
      * @param password Password to be validated
-     * @param minLen   The minimum length the password can be.
+     * @param minLen   The minimum lingth the password can be.
      * @param maxLen   The Maximum length the password can be.
-     * @param lowCase  Set true if password must contain at least one lowercase
+     * @param LowCase  Set true if password must contain atleast one lowercase
      *                 character, false otherwise.
-     * @param upCase   Set true if password must contain at least one uppercase
+     * @param upCase   Set true if password must contain atleast one uppercase
      *                 character, false otherwise.
-     * @param specChar set true if password must contain at least one special
+     * @param specChar set true if password must contain atleast one special
      *                 character, false otherwise.
-     * @param num      ser true if password must contain at least one numerical
+     * @param num      ser true if password must contain atleast one numerical
      *                 value, false otherwise.
      * @return true if all constraints are satisfied.
-     * @throws IllegalArgumentException If all constraints aren't satisfied.
+     * @throws IOException If all constraints aren't satisfied.
      * @author Navardo Williams
      */
-    public static boolean validatePassword(String password, int minLen, int maxLen, boolean lowCase,
+    public static boolean validatePassword(String password, int minLen, int maxLen, boolean LowCase,
             boolean upCase,
             boolean specChar,
-            boolean num) throws IllegalArgumentException {
+            boolean num) throws IOException {
 
-        String type = "Password";
+        String type = "username";
         StringBuilder message = new StringBuilder("");
         if (!Validator.validStrLen(minLen, maxLen, password))
             message.append(String.format("%s must be between %d and %d\n", type, minLen, maxLen));
 
         Map<String, Boolean> strMeta = Validator.extractStrMeta(password);
-        if (lowCase && !strMeta.get("hasLoCase"))
-            message.append(String.format("%s Must contain at least one lower case character\n", type));
+        if (LowCase && !strMeta.get("hasLoCase"))
+            message.append(String.format("%s Must contain atleast one lower case character\n", type));
         if (upCase && !strMeta.get("hasUpCase"))
-            message.append(String.format("%s Must contain at least one upper case character.\n", type));
+            message.append(String.format("%s Must contain atleast one upper case character.\n", type));
         if (specChar && !strMeta.get("hasSpecChar"))
-            message.append(String.format("%s Must contain at least one special character.\n", type));
+            message.append(String.format("%s Must contain atleast one special character.\n", type));
         if (num && !strMeta.get("hasNum"))
-            message.append(String.format("%s Must contain at least one numerical value.\n", type));
+            message.append(String.format("%s Must contain atleast one numerical value.\n", type));
         if (!message.isEmpty())
-            throw new IllegalArgumentException(message.toString());
+            throw new IOException(message.toString());
         return true;
 
     }
