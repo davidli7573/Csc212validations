@@ -642,6 +642,8 @@ class UserValidator {
      * @return true if all constraints are satisfied.
      * @throws IllegalArgumentException If all constraints aren't satisfied.
      * @author Navardo Williams
+     * @bug [Issue #15] synopsis: Fixed UX bug invalid password is entered. before:
+     *      outpur usermane is invalid, now: output password is invalid
      */
     public static boolean validatePassword(String password, int minLen, int maxLen, boolean lowCase,
             boolean upCase,
@@ -667,6 +669,11 @@ class UserValidator {
         return true;
     }
 
+    public static boolean isValidUser(String username) {
+        validateUserName(username, , maxLen, LowCase, upCase, specChar, num)
+
+    }
+
     /**
      * validates a secret question used for authentication
      *
@@ -690,12 +697,24 @@ class UserValidator {
      *         otherwise
      * @author Navardo Williams
      */
-    public static boolean validateSecretAnswer(String secretAnswer, String givenAnswer) {
-        if (secretAnswer == null || givenAnswer == null || secretAnswer.length() != givenAnswer.length()) {
+    public static boolean validateSecretAnswer(String username, String givenAnswer) {
+        if (givenAnswer == null) {
             return false;
         }
-        String normalizedSecret = secretAnswer.toLowerCase();
-        String normalizedGiven = givenAnswer.toLowerCase();
+
+        if (!isValidUser(username))
+            return false;
+
+
+        String secretAnswer = new UserManager().getUser(username).getSecretAnswer();
+
+        String normalizedSecret = secretAnswer.toLowerCase().trim();
+        String normalizedGiven = givenAnswer.toLowerCase().trim();
+
+        if (!Validator.validStrLen(0, normalizedSecret.length(), normalizedGiven)) {
+            return false;
+        }
+
         return normalizedSecret.equals(normalizedGiven);
     }
 }
