@@ -1,6 +1,5 @@
 import java.io.File;
 import java.io.FileNotFoundException;
-import java.io.IOException;
 import java.time.Year;
 import java.util.HashMap;
 import java.util.List;
@@ -120,23 +119,23 @@ public final class Validator {
 
     /**
      * Checks whether a string contains invalid or disallowed characters.
-     * Allowed characters may include letters, numbers, spaces, and basic
-     * punctuation.
+     * Allowed characters are printable character from ascii table
+     * prevent unprintable characters and ▋▋▋
      *
      * @param value the string to validate
      * @return true if invalid characters are found, false otherwise
      * @author David Li
      */
-    public static boolean hasInvalidCharacters(String value) {
+    public static boolean isInvalidCharacters(String value) {
         if (value == null) {
-            return true;
+            return false;
         }
         for (char c : value.toCharArray()) {
-            if (c < 32 || c > 126) {
-                return true;
+            if (c < 33 || c > 126) {
+                return false;
             }
         }
-        return false;
+        return true;
     }
 
 }
@@ -153,19 +152,19 @@ class CsvValidator {
     final static int MIN_YEAR = 1900;
     final static int MAX_YEAR = Year.now().getValue();
     static final String[] INCOME_CATEGORIES = {
-            "Compensation", "Allowance", "Investments"
+        "Compensation", "Allowance", "Investments"
     };
 
     static final String[] EXPENSE_CATEGORIES = {
-            "Home", "Utilities", "Food", "Appearance",
-            "Work", "Education", "Transportation",
-            "Entertainment", "Professional Services"
+        "Home", "Utilities", "Food", "Appearance",
+        "Work", "Education", "Transportation",
+        "Entertainment", "Professional Services"
     };
     static final String[] VALIDCATEGORIES = {
-            "Compensation", "Allowance", "Investments",
-            "Home", "Utilities", "Food", "Appearance",
-            "Work", "Education", "Transportation",
-            "Entertainment", "Professional Services", "Other"
+        "Compensation", "Allowance", "Investments",
+        "Home", "Utilities", "Food", "Appearance",
+        "Work", "Education", "Transportation",
+        "Entertainment", "Professional Services", "Other"
     };
 
     /**
@@ -202,12 +201,10 @@ class CsvValidator {
         if (!file.canRead()) {
             throw new IllegalArgumentException("File cannot be read.");
         }
-        if (file.length() == 0) {
-            throw new IllegalArgumentException("File is empty.");
-        }
         try (Scanner scanner = new Scanner(file)) {
             return scanner.hasNextLine();
-        } catch (FileNotFoundException e) {
+        } 
+        catch (FileNotFoundException e) {
             throw new IllegalArgumentException("File could not be opened.");
         }
     }
@@ -247,11 +244,12 @@ class CsvValidator {
             }
         }
 
-        if (!validateYearConsistency(rows)) {
-            return !validateYearConsistency(rows);
+        int year = Integer.parseInt(fileName.substring(0, 4));
+
+        if (!validateYearConsistency(rows,year)) {
+            return false;
         }
 
-        int year = Integer.parseInt(fileName.substring(0, 4));
         return validateUniqueFile(year, existingYears);
     }
 
@@ -259,6 +257,7 @@ class CsvValidator {
      * Validates that the file name follows the required format YYYY.csv.
      *
      * @param fileName the name of the file
+     * @throws IllegalArgumentException throws if it empty,wrong file, or there is nothing
      * @return true if the file name is valid, false otherwise
      * @bug [Issue #12] fixed crashing application on invalid file extension
      *      by returning a boolean instead of throws so MainMenu.java accepts it
@@ -288,7 +287,7 @@ class CsvValidator {
         int year = Integer.parseInt(yearPart);
 
         if (year < MIN_YEAR || year > MAX_YEAR) {
-            return false;
+            return (year < MIN_YEAR || year > MAX_YEAR);
         }
 
         return true;
@@ -331,7 +330,7 @@ class CsvValidator {
      * Validates a single record (row) in the CSV file.
      * A valid record must contain exactly three values:
      * date, category, and amount.
-     * The date must be in the format DD/MM/YYYY and represent a valid calendar
+     * The date must be in the format MM/DD/YYYY and represent a valid calendar
      * date.
      * The category must be one of the predefined income or expense categories.
      * The amount must be a valid integer (positive for income, negative for
@@ -352,7 +351,7 @@ class CsvValidator {
         }
 
         for (String field : record) {
-            if (Validator.hasInvalidCharacters(field)) {
+            if (!Validator.isInvalidCharacters(field)) {
                 return false;
             }
         }
@@ -398,42 +397,14 @@ class CsvValidator {
      * @return true if all dates are from the same year, false otherwise
      * @author Nadim Siddique
      */
-    public boolean validateYearConsistency(List<String[]> rows) {
-
-        if (rows == null) {
-            throw new IllegalArgumentException("Rows cannot be null.");
-        }
-
-        if (rows.size() < 2) {
-            throw new IllegalArgumentException("CSV file must contain at least one record.");
-        }
-
-        if (rows.get(1) == null || rows.get(1).length == 0) {
-            return false;
-        }
-
-        String firstDate = rows.get(1)[0].trim();
-
-        if (firstDate.length() < 10) {
-            return false;
-        }
-
-        String expectedYear = firstDate.substring(6, 10);
-
+    public boolean validateYearConsistency(List<String[]> rows, int yearFileName) {
+        String expectedYear = String.valueOf(yearFileName);
         for (int i = 1; i < rows.size(); i++) {
-
-            if (rows.get(i) == null || rows.get(i).length == 0) {
-                return false;
-            }
-
             String date = rows.get(i)[0].trim();
-
-            if (date.length() < 10 ||
-                    !date.substring(6, 10).equals(expectedYear)) {
+            if (!date.substring(6, 10).equals(expectedYear)) {
                 return false;
             }
         }
-
         return true;
     }
 
@@ -447,7 +418,6 @@ class CsvValidator {
      * @author Nadim Siddique
      */
     public boolean validateUniqueFile(int year, List<Integer> existingYears) {
-
         if (year <= 0) {
             return false;
         }
@@ -540,8 +510,9 @@ class CsvValidator {
      * acceptable bounds.
      * This method checks that the amount is a valid number,
      * is not negative (if disallowed), and falls within any defined limits.
+     * validates amount matches category except other can be negative or positive
      *
-     * @param amount the value as a int
+     * @param amount the value as a string
      * @return true if the value is valid, false otherwise
      * @author Masudul Shafi
      */
@@ -562,7 +533,10 @@ class CsvValidator {
 
         // check for overflow before the parsing
         try {
-            Integer.parseInt(trimmed);
+            int value = Integer.parseInt(trimmed);
+            if(value == 0 && trimmed.startsWith("-")) {
+                return false;
+            }
         } catch (NumberFormatException e) {
             return false;
         }
