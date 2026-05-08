@@ -665,7 +665,6 @@ class UserValidator {
         if (!message.isEmpty())
             throw new IllegalArgumentException(message.toString());
         return true;
-
     }
 
     /**
@@ -686,13 +685,17 @@ class UserValidator {
      * validates an answer given to a secret question
      *
      * @param secretAnswer account secret Answer
-     * @return return true if secretAnswer is valid, false otherwise
+     * @param givenAnswer  the answer provided by the user to compare against
+     * @return return true if secretAnswer is valid and matches givenAnswer, false
+     *         otherwise
      * @author Navardo Williams
      */
-    public static boolean validateSecretAnswer(String secretAnswer) {
-        if (!Validator.validStrLen(8, 16, secretAnswer)) {
+    public static boolean validateSecretAnswer(String secretAnswer, String givenAnswer) {
+        if (secretAnswer == null || givenAnswer == null || secretAnswer.length() != givenAnswer.length()) {
             return false;
         }
-        return true;
+        String normalizedSecret = secretAnswer.toLowerCase();
+        String normalizedGiven = givenAnswer.toLowerCase();
+        return normalizedSecret.equals(normalizedGiven);
     }
 }
