@@ -1,6 +1,5 @@
 package com.hhs.pfm.validation;
 
-import java.io.IOException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -32,11 +31,11 @@ public final class Validator {
      * @param minVal The lower bound of all valid input options available.
      * @param maxVal The upper bound of all valid input options available.
      * @return true if the value entered by the user is a valid entry, otherwise
-     *         throws an IOException.
-     * @throws IOException
+     *         throws an IllegalArgumentException.
+     * @throws IllegalArgumentException
      * @author Navardo Williams
      */
-    public static boolean isValidInput(String val, int minVal, int maxVal) throws IOException {
+    public static boolean isValidInput(String val, int minVal, int maxVal) throws IllegalArgumentException {
         StringBuffer message = new StringBuffer("");
         if (!Validator.isInt(val))
             message.append("Must enter a numerical value!\n");
@@ -51,8 +50,9 @@ public final class Validator {
             }
         }
         if (!message.isEmpty())
-            throw new IOException(message.append(String.format((maxVal - minVal) <= 1 ? "Please select %d or %d: "
-                    : "Please select a choice between %d and %d: ",
+            throw new IllegalArgumentException(message.append(String.format(
+                    (maxVal - minVal) <= 1 ? "Please select %d or %d: "
+                            : "Please select a choice between %d and %d: ",
                     minVal, maxVal)).toString());
         return true;
     }
