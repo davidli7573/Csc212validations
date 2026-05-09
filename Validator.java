@@ -1,6 +1,5 @@
 import java.io.File;
 import java.io.FileNotFoundException;
-import java.io.IOException;
 import java.time.Year;
 import java.util.HashMap;
 import java.util.List;
@@ -153,19 +152,19 @@ class CsvValidator {
     final static int MIN_YEAR = 1900;
     final static int MAX_YEAR = Year.now().getValue();
     static final String[] INCOME_CATEGORIES = {
-            "Compensation", "Allowance", "Investments"
+        "Compensation", "Allowance", "Investments"
     };
 
     static final String[] EXPENSE_CATEGORIES = {
-            "Home", "Utilities", "Food", "Appearance",
-            "Work", "Education", "Transportation",
-            "Entertainment", "Professional Services"
+        "Home", "Utilities", "Food", "Appearance",
+        "Work", "Education", "Transportation",
+        "Entertainment", "Professional Services"
     };
     static final String[] VALIDCATEGORIES = {
-            "Compensation", "Allowance", "Investments",
-            "Home", "Utilities", "Food", "Appearance",
-            "Work", "Education", "Transportation",
-            "Entertainment", "Professional Services", "Other"
+        "Compensation", "Allowance", "Investments",
+        "Home", "Utilities", "Food", "Appearance",
+        "Work", "Education", "Transportation",
+        "Entertainment", "Professional Services", "Other"
     };
 
     /**
@@ -204,7 +203,8 @@ class CsvValidator {
         }
         try (Scanner scanner = new Scanner(file)) {
             return scanner.hasNextLine();
-        } catch (FileNotFoundException e) {
+        } 
+        catch (FileNotFoundException e) {
             throw new IllegalArgumentException("File could not be opened.");
         }
     }
@@ -257,8 +257,7 @@ class CsvValidator {
      * Validates that the file name follows the required format YYYY.csv.
      *
      * @param fileName the name of the file
-     * @throws IllegalArgumentException throws if it empty,wrong file, or there is
-     *                                  nothing
+     * @throws IllegalArgumentException throws if it empty,wrong file, or there is nothing
      * @return true if the file name is valid, false otherwise
      * @bug [Issue #12] fixed crashing application on invalid file extension
      *      by returning a boolean instead of throws so MainMenu.java accepts it
@@ -535,7 +534,7 @@ class CsvValidator {
         // check for overflow before the parsing
         try {
             int value = Integer.parseInt(trimmed);
-            if (value == 0 && trimmed.startsWith("-")) {
+            if(value == 0 && trimmed.startsWith("-")) {
                 return false;
             }
         } catch (NumberFormatException e) {
