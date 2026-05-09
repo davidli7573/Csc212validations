@@ -1,5 +1,6 @@
 import java.io.File;
 import java.io.FileNotFoundException;
+import java.io.IOException;
 import java.time.Year;
 import java.util.HashMap;
 import java.util.List;
@@ -65,7 +66,7 @@ public final class Validator {
      * @author Navardo Williams
      */
     public static boolean validStrLen(int minLen, int maxLen, String str) {
-        return (minLen <= str.length() && maxLen >= str.length() && str != null) ? true : false;
+        return (str != null && minLen <= str.length() && maxLen >= str.length());
     }
 
     /**
@@ -152,19 +153,19 @@ class CsvValidator {
     final static int MIN_YEAR = 1900;
     final static int MAX_YEAR = Year.now().getValue();
     static final String[] INCOME_CATEGORIES = {
-        "Compensation", "Allowance", "Investments"
+            "Compensation", "Allowance", "Investments"
     };
 
     static final String[] EXPENSE_CATEGORIES = {
-        "Home", "Utilities", "Food", "Appearance",
-        "Work", "Education", "Transportation",
-        "Entertainment", "Professional Services"
+            "Home", "Utilities", "Food", "Appearance",
+            "Work", "Education", "Transportation",
+            "Entertainment", "Professional Services"
     };
     static final String[] VALIDCATEGORIES = {
-        "Compensation", "Allowance", "Investments",
-        "Home", "Utilities", "Food", "Appearance",
-        "Work", "Education", "Transportation",
-        "Entertainment", "Professional Services", "Other"
+            "Compensation", "Allowance", "Investments",
+            "Home", "Utilities", "Food", "Appearance",
+            "Work", "Education", "Transportation",
+            "Entertainment", "Professional Services", "Other"
     };
 
     /**
@@ -203,8 +204,7 @@ class CsvValidator {
         }
         try (Scanner scanner = new Scanner(file)) {
             return scanner.hasNextLine();
-        } 
-        catch (FileNotFoundException e) {
+        } catch (FileNotFoundException e) {
             throw new IllegalArgumentException("File could not be opened.");
         }
     }
@@ -246,7 +246,7 @@ class CsvValidator {
 
         int year = Integer.parseInt(fileName.substring(0, 4));
 
-        if (!validateYearConsistency(rows,year)) {
+        if (!validateYearConsistency(rows, year)) {
             return false;
         }
 
@@ -257,7 +257,8 @@ class CsvValidator {
      * Validates that the file name follows the required format YYYY.csv.
      *
      * @param fileName the name of the file
-     * @throws IllegalArgumentException throws if it empty,wrong file, or there is nothing
+     * @throws IllegalArgumentException throws if it empty,wrong file, or there is
+     *                                  nothing
      * @return true if the file name is valid, false otherwise
      * @bug [Issue #12] fixed crashing application on invalid file extension
      *      by returning a boolean instead of throws so MainMenu.java accepts it
@@ -534,7 +535,7 @@ class CsvValidator {
         // check for overflow before the parsing
         try {
             int value = Integer.parseInt(trimmed);
-            if(value == 0 && trimmed.startsWith("-")) {
+            if (value == 0 && trimmed.startsWith("-")) {
                 return false;
             }
         } catch (NumberFormatException e) {
@@ -556,6 +557,22 @@ class UserValidator {
      * Default constructor for Validator.
      */
     private UserValidator() {
+    }
+
+    /**
+     * checks to see if a username matches an existing user account
+     *
+     * @param username username of the user account to check if is a valid user in
+     *                 storage
+     * @return true if the user exists and false otherwise
+     * @throws IllegalArgumentException
+     * @author Navardo Williams
+     */
+    public static boolean isValidUser(String username) throws IllegalArgumentException {
+        if (!Storage.userFileExists(username))
+            throw new IllegalArgumentException("Username doesn't exist.");
+
+        return true;
     }
 
     /**
@@ -615,6 +632,8 @@ class UserValidator {
      *                 value, false otherwise.
      * @return true if all constraints are satisfied.
      * @throws IllegalArgumentException If all constraints aren't satisfied.
+     * @bug [Issue #15] synopsis: Fixed UX bug invalid password is entered. before:
+     *      output usermane is invalid, now: output password is invalid
      * @author Navardo Williams
      */
     public static boolean validatePassword(String password, int minLen, int maxLen, boolean lowCase,
@@ -649,7 +668,7 @@ class UserValidator {
      * @author Navardo Williams
      */
     public static boolean validateSecretQuestion(String secretQuestion) {
-        if (!Validator.validStrLen(8, 16, secretQuestion)) {
+        if (!Validator.validStrLen(1, 9999, secretQuestion)) {
             return false;
         }
         return true;
@@ -660,16 +679,27 @@ class UserValidator {
      *
      * @param secretAnswer account secret Answer
      * @param givenAnswer  the answer provided by the user to compare against
-     * @return return true if secretAnswer is valid and matches givenAnswer, false
+     * @return return true If secretAnswer is valid and matches givenAnswer, false
      *         otherwise
+     * @throws IOException If file operation fail for retrieving users secret
+     *                     answer.
      * @author Navardo Williams
      */
-    public static boolean validateSecretAnswer(String secretAnswer, String givenAnswer) {
-        if (secretAnswer == null || givenAnswer == null || secretAnswer.length() != givenAnswer.length()) {
+    public static boolean validateSecretAnswer(String username, String givenAnswer) throws IOException {
+
+        if (givenAnswer == null || !Storage.UserFileExists(username)) {
             return false;
         }
-        String normalizedSecret = secretAnswer.toLowerCase();
-        String normalizedGiven = givenAnswer.toLowerCase();
+
+        String secretAnswer = new UserManager().getUser(username).getSecretAnswer();
+
+        String normalizedSecret = secretAnswer.toLowerCase().trim();
+        String normalizedGiven = givenAnswer.toLowerCase().trim();
+
+        if (normalizedGiven.length() != normalizedSecret.length()) {
+            return false;
+        }
+
         return normalizedSecret.equals(normalizedGiven);
     }
 }
