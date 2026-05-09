@@ -66,7 +66,7 @@ public final class Validator {
      * @author Navardo Williams
      */
     public static boolean validStrLen(int minLen, int maxLen, String str) {
-        return (minLen <= str.length() && maxLen >= str.length() && str != null) ? true : false;
+        return (str != null && minLen <= str.length() && maxLen >= str.length());
     }
 
     /**
@@ -120,23 +120,23 @@ public final class Validator {
 
     /**
      * Checks whether a string contains invalid or disallowed characters.
-     * Allowed characters may include letters, numbers, spaces, and basic
-     * punctuation.
+     * Allowed characters are printable character from ascii table
+     * prevent unprintable characters and ▋▋▋
      *
      * @param value the string to validate
      * @return true if invalid characters are found, false otherwise
      * @author David Li
      */
-    public static boolean hasInvalidCharacters(String value) {
+    public static boolean isInvalidCharacters(String value) {
         if (value == null) {
-            return true;
+            return false;
         }
         for (char c : value.toCharArray()) {
-            if (c < 32 || c > 126) {
-                return true;
+            if (c < 33 || c > 126) {
+                return false;
             }
         }
-        return false;
+        return true;
     }
 
 }
@@ -202,9 +202,6 @@ class CsvValidator {
         if (!file.canRead()) {
             throw new IllegalArgumentException("File cannot be read.");
         }
-        if (file.length() == 0) {
-            throw new IllegalArgumentException("File is empty.");
-        }
         try (Scanner scanner = new Scanner(file)) {
             return scanner.hasNextLine();
         } catch (FileNotFoundException e) {
@@ -247,11 +244,12 @@ class CsvValidator {
             }
         }
 
-        if (!validateYearConsistency(rows)) {
-            return !validateYearConsistency(rows);
+        int year = Integer.parseInt(fileName.substring(0, 4));
+
+        if (!validateYearConsistency(rows, year)) {
+            return false;
         }
 
-        int year = Integer.parseInt(fileName.substring(0, 4));
         return validateUniqueFile(year, existingYears);
     }
 
@@ -259,6 +257,8 @@ class CsvValidator {
      * Validates that the file name follows the required format YYYY.csv.
      *
      * @param fileName the name of the file
+     * @throws IllegalArgumentException throws if it empty,wrong file, or there is
+     *                                  nothing
      * @return true if the file name is valid, false otherwise
      * @bug [Issue #12] fixed crashing application on invalid file extension
      *      by returning a boolean instead of throws so MainMenu.java accepts it
@@ -288,7 +288,7 @@ class CsvValidator {
         int year = Integer.parseInt(yearPart);
 
         if (year < MIN_YEAR || year > MAX_YEAR) {
-            return false;
+            return (year < MIN_YEAR || year > MAX_YEAR);
         }
 
         return true;
@@ -331,7 +331,7 @@ class CsvValidator {
      * Validates a single record (row) in the CSV file.
      * A valid record must contain exactly three values:
      * date, category, and amount.
-     * The date must be in the format DD/MM/YYYY and represent a valid calendar
+     * The date must be in the format MM/DD/YYYY and represent a valid calendar
      * date.
      * The category must be one of the predefined income or expense categories.
      * The amount must be a valid integer (positive for income, negative for
@@ -352,7 +352,7 @@ class CsvValidator {
         }
 
         for (String field : record) {
-            if (Validator.hasInvalidCharacters(field)) {
+            if (!Validator.isInvalidCharacters(field)) {
                 return false;
             }
         }
@@ -398,42 +398,14 @@ class CsvValidator {
      * @return true if all dates are from the same year, false otherwise
      * @author Nadim Siddique
      */
-    public boolean validateYearConsistency(List<String[]> rows) {
-
-        if (rows == null) {
-            throw new IllegalArgumentException("Rows cannot be null.");
-        }
-
-        if (rows.size() < 2) {
-            throw new IllegalArgumentException("CSV file must contain at least one record.");
-        }
-
-        if (rows.get(1) == null || rows.get(1).length == 0) {
-            return false;
-        }
-
-        String firstDate = rows.get(1)[0].trim();
-
-        if (firstDate.length() < 10) {
-            return false;
-        }
-
-        String expectedYear = firstDate.substring(6, 10);
-
+    public boolean validateYearConsistency(List<String[]> rows, int yearFileName) {
+        String expectedYear = String.valueOf(yearFileName);
         for (int i = 1; i < rows.size(); i++) {
-
-            if (rows.get(i) == null || rows.get(i).length == 0) {
-                return false;
-            }
-
             String date = rows.get(i)[0].trim();
-
-            if (date.length() < 10 ||
-                    !date.substring(6, 10).equals(expectedYear)) {
+            if (!date.substring(6, 10).equals(expectedYear)) {
                 return false;
             }
         }
-
         return true;
     }
 
@@ -447,7 +419,6 @@ class CsvValidator {
      * @author Nadim Siddique
      */
     public boolean validateUniqueFile(int year, List<Integer> existingYears) {
-
         if (year <= 0) {
             return false;
         }
@@ -540,8 +511,9 @@ class CsvValidator {
      * acceptable bounds.
      * This method checks that the amount is a valid number,
      * is not negative (if disallowed), and falls within any defined limits.
+     * validates amount matches category except other can be negative or positive
      *
-     * @param amount the value as a int
+     * @param amount the value as a string
      * @return true if the value is valid, false otherwise
      * @author Masudul Shafi
      */
@@ -562,7 +534,10 @@ class CsvValidator {
 
         // check for overflow before the parsing
         try {
-            Integer.parseInt(trimmed);
+            int value = Integer.parseInt(trimmed);
+            if (value == 0 && trimmed.startsWith("-")) {
+                return false;
+            }
         } catch (NumberFormatException e) {
             return false;
         }
@@ -582,6 +557,22 @@ class UserValidator {
      * Default constructor for Validator.
      */
     private UserValidator() {
+    }
+
+    /**
+     * checks to see if a username matches an existing user account
+     *
+     * @param username username of the user account to check if is a valid user in
+     *                 storage
+     * @return true if the user exists and false otherwise
+     * @throws IllegalArgumentException
+     * @author Navardo Williams
+     */
+    public static boolean isValidUser(String username) throws IllegalArgumentException {
+        if (!Storage.userFileExists(username))
+            throw new IllegalArgumentException("Username doesn't exist.");
+
+        return true;
     }
 
     /**
@@ -641,9 +632,9 @@ class UserValidator {
      *                 value, false otherwise.
      * @return true if all constraints are satisfied.
      * @throws IllegalArgumentException If all constraints aren't satisfied.
-     * @author Navardo Williams
      * @bug [Issue #15] synopsis: Fixed UX bug invalid password is entered. before:
      *      outpur usermane is invalid, now: output password is invalid
+     * @author Navardo Williams
      */
     public static boolean validatePassword(String password, int minLen, int maxLen, boolean lowCase,
             boolean upCase,
@@ -669,11 +660,6 @@ class UserValidator {
         return true;
     }
 
-    public static boolean isValidUser(String username) {
-        validateUserName(username, , maxLen, LowCase, upCase, specChar, num)
-
-    }
-
     /**
      * validates a secret question used for authentication
      *
@@ -682,7 +668,7 @@ class UserValidator {
      * @author Navardo Williams
      */
     public static boolean validateSecretQuestion(String secretQuestion) {
-        if (!Validator.validStrLen(8, 16, secretQuestion)) {
+        if (!Validator.validStrLen(1, 9999, secretQuestion)) {
             return false;
         }
         return true;
@@ -693,11 +679,13 @@ class UserValidator {
      *
      * @param secretAnswer account secret Answer
      * @param givenAnswer  the answer provided by the user to compare against
-     * @return return true if secretAnswer is valid and matches givenAnswer, false
+     * @return return true If secretAnswer is valid and matches givenAnswer, false
      *         otherwise
+     * @throws IOException If file operation fail for retrieving users secret
+     *                     answer.
      * @author Navardo Williams
      */
-    public static boolean validateSecretAnswer(String username, String givenAnswer) {
+    public static boolean validateSecretAnswer(String username, String givenAnswer) throws IOException {
         if (givenAnswer == null) {
             return false;
         }
@@ -705,13 +693,12 @@ class UserValidator {
         if (!isValidUser(username))
             return false;
 
-
         String secretAnswer = new UserManager().getUser(username).getSecretAnswer();
 
         String normalizedSecret = secretAnswer.toLowerCase().trim();
         String normalizedGiven = givenAnswer.toLowerCase().trim();
 
-        if (!Validator.validStrLen(0, normalizedSecret.length(), normalizedGiven)) {
+        if (!Validator.validStrLen(1, normalizedSecret.length(), normalizedGiven)) {
             return false;
         }
 
