@@ -45,7 +45,7 @@ public final class Validator {
                     message.append("Input value out of range!\n");
                 }
             } catch (NumberFormatException e) {
-                message.append("input value out of range!\n");
+                message.append("Input value out of range!\n");
             }
         }
         if (!message.isEmpty())
@@ -70,7 +70,7 @@ public final class Validator {
     }
 
     /**
-     * @param str String passed for meta data extractraction.
+     * @param str String passed for meta data extraction.
      * @return A map containing the meta data of string passed.
      * @author Navardo Williams
      */
@@ -120,19 +120,19 @@ public final class Validator {
 
     /**
      * Checks whether a string contains invalid or disallowed characters.
-     * Allowed characters are printable character from ascii table
+     * Allowed characters are printable characters from ASCII table
      * prevent unprintable characters and ▋▋▋
      *
      * @param value the string to validate
-     * @return true if invalid characters are found, false otherwise
+     * @return true if no invalid character is found, false otherwise
      * @author David Li
      */
-    public static boolean isInvalidCharacters(String value) {
+    public static boolean isValidCharacters(String value) {
         if (value == null) {
             return false;
         }
         for (char c : value.toCharArray()) {
-            if (c < 33 || c > 126) {
+            if (c < 32 || c > 126) {
                 return false;
             }
         }
@@ -149,9 +149,9 @@ public final class Validator {
  * @author David Li, Masudul Shafi, Nadim Siddique, Navardo Williams
  */
 class CsvValidator {
-    final static int EXPECTED_NAME_LENGTH = 8;
-    final static int MIN_YEAR = 1900;
-    final static int MAX_YEAR = Year.now().getValue();
+    static final int EXPECTED_NAME_LENGTH = 8;
+    static final int MIN_YEAR = 1900;
+    static final int MAX_YEAR = Year.now().getValue();
     static final String[] INCOME_CATEGORIES = {
             "Compensation", "Allowance", "Investments"
     };
@@ -161,7 +161,7 @@ class CsvValidator {
             "Work", "Education", "Transportation",
             "Entertainment", "Professional Services"
     };
-    static final String[] VALIDCATEGORIES = {
+    static final String[] VALID_CATEGORIES = {
             "Compensation", "Allowance", "Investments",
             "Home", "Utilities", "Food", "Appearance",
             "Work", "Education", "Transportation",
@@ -187,7 +187,7 @@ class CsvValidator {
      */
     public boolean checkFileReadable(String filePath) {
         if (filePath == null) {
-            throw new IllegalArgumentException("Error:no File given");
+            throw new IllegalArgumentException("Error: no File given");
         }
         if (filePath.trim().isEmpty()) {
             throw new IllegalArgumentException("File path cannot be empty.");
@@ -211,17 +211,16 @@ class CsvValidator {
 
     /**
      * Validates the entire file by checking file name, header,
-     * records, and year consistency.
+     * records.
      *
      * @param fileName      the name of the CSV file
      * @param rows          the contents of the CSV file where each row is split
      *                      into fields
-     * @param existingYears list of years already stored for the user
      * @throws IllegalArgumentException if row doesn't exist or missing field
      * @return true if the file passes all validation checks, false otherwise
      * @author Nadim Siddique
      */
-    public boolean validateFile(String fileName, List<String[]> rows, List<Integer> existingYears) {
+    public boolean validateFile(String fileName, List<String[]> rows) {
         if (rows == null) {
             throw new IllegalArgumentException("no rows given");
         }
@@ -243,22 +242,14 @@ class CsvValidator {
                 return false;
             }
         }
-
-        int year = Integer.parseInt(fileName.substring(0, 4));
-
-        if (!validateYearConsistency(rows, year)) {
-            return false;
-        }
-
-        return validateUniqueFile(year, existingYears);
+        return true;
     }
 
     /**
      * Validates that the file name follows the required format YYYY.csv.
      *
      * @param fileName the name of the file
-     * @throws IllegalArgumentException throws if it empty,wrong file, or there is
-     *                                  nothing
+     * @throws IllegalArgumentException throws if it's empty,invalid file type, or if its missing
      * @return true if the file name is valid, false otherwise
      * @bug [Issue #12] fixed crashing application on invalid file extension
      *      by returning a boolean instead of throws so MainMenu.java accepts it
@@ -288,7 +279,7 @@ class CsvValidator {
         int year = Integer.parseInt(yearPart);
 
         if (year < MIN_YEAR || year > MAX_YEAR) {
-            return (year < MIN_YEAR || year > MAX_YEAR);
+            return false;
         }
 
         return true;
@@ -352,7 +343,7 @@ class CsvValidator {
         }
 
         for (String field : record) {
-            if (!Validator.isInvalidCharacters(field)) {
+            if (!Validator.isValidCharacters(field)) {
                 return false;
             }
         }
@@ -415,14 +406,11 @@ class CsvValidator {
      *
      * @param year          the year extracted from the file
      * @param existingYears list of years already stored for the user
-     * @return true if the year is unique, false otherwise
+     * @return true if the filename year does not exist for user yet, false otherwise
      * @author Nadim Siddique
      */
     public boolean validateUniqueFile(int year, List<Integer> existingYears) {
-        if (year <= 0) {
-            return false;
-        }
-
+ 
         if (existingYears == null) {
             return true;
         }
@@ -484,8 +472,7 @@ class CsvValidator {
     /**
      * Validates whether a given category is acceptable.
      * This method ensures the category is not null, not empty, and exists within an
-     * allowed set
-     * of values.
+     * allowed set of values.
      *
      * @param category the category string to validate
      * @return true if the category is valid, false otherwise
@@ -497,7 +484,7 @@ class CsvValidator {
         }
 
         String trimmed = category.trim();
-        for (String valid : VALIDCATEGORIES) {
+        for (String valid : VALID_CATEGORIES) {
             if (valid.equalsIgnoreCase(trimmed)) {
                 return true;
             }
@@ -510,7 +497,7 @@ class CsvValidator {
      * Validates whether a given amount is in a correct numeric format and within
      * acceptable bounds.
      * This method checks that the amount is a valid number,
-     * is not negative (if disallowed), and falls within any defined limits.
+     * and falls within any defined limits.
      * validates amount matches category except other can be negative or positive
      *
      * @param amount the value as a string
@@ -554,7 +541,7 @@ class CsvValidator {
  */
 class UserValidator {
     /**
-     * Default constructor for Validator.
+     * Default constructor for UserValidator.
      */
     private UserValidator() {
     }
@@ -564,8 +551,8 @@ class UserValidator {
      *
      * @param username username of the user account to check if is a valid user in
      *                 storage
-     * @return true if the user exists and false otherwise
-     * @throws IllegalArgumentException
+     * @return true if the user exists
+     * @throws IllegalArgumentException if the user doesn't exists
      * @author Navardo Williams
      */
     public static boolean isValidUser(String username) throws IllegalArgumentException {
@@ -576,7 +563,7 @@ class UserValidator {
     }
 
     /**
-     * functioon to validate usernames
+     * function to validate usernames
      *
      * @param userName The username to be validated
      * @param minLen   The minimum length the username can be.
@@ -587,7 +574,7 @@ class UserValidator {
      *                 character, false otherwise.
      * @param specChar set true if userName must contain at least one special
      *                 character, false otherwise.
-     * @param num      ser true if userName must contain at least one numerical
+     * @param num      set true if userName must contain at least one numerical
      *                 value, false otherwise.
      * @return true if all constraints are satisfied.
      * @throws IllegalArgumentException If all constraints aren't satisfied.
@@ -628,12 +615,12 @@ class UserValidator {
      *                 character, false otherwise.
      * @param specChar set true if password must contain at least one special
      *                 character, false otherwise.
-     * @param num      ser true if password must contain at least one numerical
+     * @param num      set true if password must contain at least one numerical
      *                 value, false otherwise.
      * @return true if all constraints are satisfied.
      * @throws IllegalArgumentException If all constraints aren't satisfied.
      * @bug [Issue #15] synopsis: Fixed UX bug invalid password is entered. before:
-     *      output usermane is invalid, now: output password is invalid
+     *      output username is invalid, now: output password is invalid
      * @author Navardo Williams
      */
     public static boolean validatePassword(String password, int minLen, int maxLen, boolean lowCase,
@@ -664,7 +651,7 @@ class UserValidator {
      * validates a secret question used for authentication
      *
      * @param secretQuestion account secret question
-     * @return true if an imputed secretQuestion is valid, false otherwise
+     * @return true if an inputted secretQuestion is valid, false otherwise
      * @author Navardo Williams
      */
     public static boolean validateSecretQuestion(String secretQuestion) {
@@ -681,13 +668,13 @@ class UserValidator {
      * @param givenAnswer  the answer provided by the user to compare against
      * @return return true If secretAnswer is valid and matches givenAnswer, false
      *         otherwise
-     * @throws IOException If file operation fail for retrieving users secret
+     * @throws IOException If file operation fails for retrieving users secret
      *                     answer.
      * @author Navardo Williams
      */
     public static boolean validateSecretAnswer(String username, String givenAnswer) throws IOException {
 
-        if (givenAnswer == null || !Storage.UserFileExists(username)) {
+        if (givenAnswer == null || !Storage.userFileExists(username)) {
             return false;
         }
 
