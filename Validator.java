@@ -213,9 +213,9 @@ class CsvValidator {
      * Validates the entire file by checking file name, header,
      * records.
      *
-     * @param fileName      the name of the CSV file
-     * @param rows          the contents of the CSV file where each row is split
-     *                      into fields
+     * @param fileName the name of the CSV file
+     * @param rows     the contents of the CSV file where each row is split
+     *                 into fields
      * @throws IllegalArgumentException if row doesn't exist or missing field
      * @return true if the file passes all validation checks, false otherwise
      * @author Nadim Siddique
@@ -249,7 +249,8 @@ class CsvValidator {
      * Validates that the file name follows the required format YYYY.csv.
      *
      * @param fileName the name of the file
-     * @throws IllegalArgumentException throws if it's empty,invalid file type, or if its missing
+     * @throws IllegalArgumentException throws if it's empty,invalid file type, or
+     *                                  if its missing
      * @return true if the file name is valid, false otherwise
      * @bug [Issue #12] fixed crashing application on invalid file extension
      *      by returning a boolean instead of throws so MainMenu.java accepts it
@@ -406,11 +407,12 @@ class CsvValidator {
      *
      * @param year          the year extracted from the file
      * @param existingYears list of years already stored for the user
-     * @return true if the filename year does not exist for user yet, false otherwise
+     * @return true if the filename year does not exist for user yet, false
+     *         otherwise
      * @author Nadim Siddique
      */
     public boolean validateUniqueFile(int year, List<Integer> existingYears) {
- 
+
         if (existingYears == null) {
             return true;
         }
@@ -547,22 +549,6 @@ class UserValidator {
     }
 
     /**
-     * checks to see if a username matches an existing user account
-     *
-     * @param username username of the user account to check if is a valid user in
-     *                 storage
-     * @return true if the user exists
-     * @throws IllegalArgumentException if the user doesn't exists
-     * @author Navardo Williams
-     */
-    public static boolean isValidUser(String username) throws IllegalArgumentException {
-        if (!Storage.userFileExists(username))
-            throw new IllegalArgumentException("Username doesn't exist.");
-
-        return true;
-    }
-
-    /**
      * function to validate usernames
      *
      * @param userName The username to be validated
@@ -648,26 +634,14 @@ class UserValidator {
     }
 
     /**
-     * validates a secret question used for authentication
-     *
-     * @param secretQuestion account secret question
-     * @return true if an inputted secretQuestion is valid, false otherwise
-     * @author Navardo Williams
-     */
-    public static boolean validateSecretQuestion(String secretQuestion) {
-        if (!Validator.validStrLen(1, 9999, secretQuestion)) {
-            return false;
-        }
-        return true;
-    }
-
-    /**
      * validates an answer given to a secret question
      *
-     * @param secretAnswer account secret Answer
-     * @param givenAnswer  the answer provided by the user to compare against
-     * @return return true If secretAnswer is valid and matches givenAnswer, false
-     *         otherwise
+     * @param username    The username of the account whose secrets answer gets
+     *                    validated.
+     * @param givenAnswer The answer provided by the user to compare against.
+     * @return Return true If secretAnswer stored on the account associated with the
+     *         username is valid and matches givenAnswer, false
+     *         otherwise.
      * @throws IOException If file operation fails for retrieving users secret
      *                     answer.
      * @author Navardo Williams
@@ -680,13 +654,11 @@ class UserValidator {
 
         String secretAnswer = new UserManager().getUser(username).getSecretAnswer();
 
-        String normalizedSecret = secretAnswer.toLowerCase().trim();
-        String normalizedGiven = givenAnswer.toLowerCase().trim();
-
-        if (normalizedGiven.length() != normalizedSecret.length()) {
-            return false;
+        int hash = 0;
+        for (char c : givenAnswer.toCharArray()) {
+            hash = 31 * hash + c;
         }
 
-        return normalizedSecret.equals(normalizedGiven);
+        return secretAnswer.equals(String.valueOf(hash));
     }
 }
