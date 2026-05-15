@@ -305,6 +305,12 @@ class CsvValidator {
             throw new IllegalArgumentException("Header must contain exactly 3 columns.");
         }
 
+        for (String value : header) {
+            if (value == null) {
+                throw new IllegalArgumentException("Header columns cannot be null.");
+            }
+        }
+
         if (!header[0].trim().equals("Date")) {
             throw new IllegalArgumentException("Invalid header column 1. Expected Date.");
         }
